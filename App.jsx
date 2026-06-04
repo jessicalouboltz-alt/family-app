@@ -22,7 +22,7 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'family-app-dev';
 
 const INITIAL_PROFILES = [
   { id: 'kid-1', name: 'Lucas', avatar: '🦖', color: 'bg-emerald-100 text-emerald-700', points: 0, targetRewardId: 'reward-2', role: 'kid' },
-  { id: 'kid-2', name: 'Addie', avatar: '🦄', color: 'bg-purple-100 text-purple-700', points: 0, targetRewardId: 'reward-1', role: 'kid' }
+  { id: 'kid-2', name: 'Addi', avatar: '🦄', color: 'bg-purple-100 text-purple-700', points: 0, targetRewardId: 'reward-1', role: 'kid' }
 ];
 
 const INITIAL_TASKS = [
