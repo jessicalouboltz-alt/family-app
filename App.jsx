@@ -4,7 +4,7 @@ import {
   Star, Gift, Check, Home, User, Settings, 
   Sparkles, CheckCircle, ChevronRight, Plus, 
   Trophy, Heart, Target, Calendar as CalendarIcon,
-  X, Clock, Trash2, AlertCircle
+  X, Clock, Trash2, AlertCircle, Lock, Delete
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -14,6 +14,8 @@ import {
   onSnapshot, deleteDoc, writeBatch, serverTimestamp
 } from 'firebase/firestore';
 
+// --- PRODUCTION FIREBASE SETUP ---
+// PASTE YOUR ACTUAL KEYS INSIDE THESE QUOTES:
 const firebaseConfig = {
   apiKey: "AIzaSyAFIhZRIMvniJXKXgtYLXsE5QK53X7sr6g",
   authDomain: "familyapp-2b16c.firebaseapp.com",
@@ -22,6 +24,12 @@ const firebaseConfig = {
   messagingSenderId: "179825100786",
   appId: "1:179825100786:web:776abb498c8dbaeaa4cd6b"
 };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = 'family-app-prod';
+// ---------------------------------
 
 const INITIAL_PROFILES = [
   { id: 'kid-1', name: 'Leo', avatar: '🦖', color: 'bg-emerald-100 text-emerald-700', points: 120, targetRewardId: 'reward-2', role: 'kid' },
@@ -754,8 +762,82 @@ const CalendarView = () => {
   );
 };
 
+const PinPad = ({ onUnlock }) => {
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState(false);
+  const CORRECT_PIN = '123456'; 
+
+  const handlePress = (num) => {
+    if (pin.length < 6) {
+      const newPin = pin + num;
+      setPin(newPin);
+      if (newPin.length === 6) {
+        if (newPin === CORRECT_PIN) {
+          onUnlock();
+        } else {
+          setError(true);
+          setTimeout(() => { setPin(''); setError(false); }, 500);
+        }
+      }
+    }
+  };
+
+  const handleBackspace = () => {
+    setPin(pin.slice(0, -1));
+  };
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center">
+      <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-500 mb-6 shadow-inner">
+        <Lock size={40} />
+      </div>
+      <h2 className="text-3xl font-black text-slate-800 mb-2">Parent Zone</h2>
+      <p className="text-slate-500 font-bold mb-8">Enter PIN to unlock</p>
+
+      <motion.div 
+        animate={error ? { x: [-10, 10, -10, 10, 0] } : {}}
+        transition={{ duration: 0.4 }}
+        className="flex gap-4 mb-8"
+      >
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
+            pin.length > i ? 'bg-indigo-500 border-indigo-500 scale-110' : 
+            error ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-slate-100'
+          }`} />
+        ))}
+      </motion.div>
+
+      <div className="grid grid-cols-3 gap-4 max-w-[280px]">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+          <button 
+            key={num} onClick={() => handlePress(num.toString())}
+            className="w-20 h-20 rounded-full bg-white border border-slate-200 shadow-sm text-2xl font-black text-slate-700 hover:bg-slate-50 hover:border-indigo-200 active:scale-95 transition-all"
+          >
+            {num}
+          </button>
+        ))}
+        <div /> {/* Empty slot */}
+        <button 
+          onClick={() => handlePress('0')}
+          className="w-20 h-20 rounded-full bg-white border border-slate-200 shadow-sm text-2xl font-black text-slate-700 hover:bg-slate-50 hover:border-indigo-200 active:scale-95 transition-all"
+        >
+          0
+        </button>
+        <button 
+          onClick={handleBackspace}
+          className="w-20 h-20 rounded-full bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-700 active:scale-95 transition-all flex items-center justify-center"
+        >
+          <Delete size={28} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const ParentsView = () => {
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const { profiles, redemptions, rewards, tasks, user } = useContext(FamilyContext);
+  
   const pendingRedemptions = redemptions.filter(r => r.status === 'pending');
   const pendingTasks = tasks.filter(t => t.status === 'pending');
   
@@ -776,6 +858,11 @@ const ParentsView = () => {
   const [adjustAmount, setAdjustAmount] = useState(5);
 
   const kids = profiles.filter(p => p.role === 'kid');
+
+  // If the parent zone hasn't been unlocked via PIN, show the PinPad
+  if (!isUnlocked) {
+    return <PinPad onUnlock={() => setIsUnlocked(true)} />;
+  }
 
   const handleApproveRedemption = async (redemptionId) => {
     if (!user) return;
@@ -882,11 +969,19 @@ const ParentsView = () => {
   return (
     <div className="max-w-6xl mx-auto h-full pb-8 flex gap-8">
       <div className="flex-1 flex flex-col gap-6">
-        <header className="mb-2">
-          <h1 className="text-4xl font-black text-slate-800 flex items-center gap-3">
-            <Settings className="text-slate-400" size={36} /> Parent Zone
-          </h1>
-          <p className="text-lg text-slate-500 font-bold mt-2">Manage your crew, quests, and rewards.</p>
+        <header className="mb-2 flex justify-between items-end">
+          <div>
+            <h1 className="text-4xl font-black text-slate-800 flex items-center gap-3">
+              <Settings className="text-slate-400" size={36} /> Parent Zone
+            </h1>
+            <p className="text-lg text-slate-500 font-bold mt-2">Manage your crew, quests, and rewards.</p>
+          </div>
+          <button 
+            onClick={() => setIsUnlocked(false)} 
+            className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold px-4 py-2 rounded-xl transition-colors"
+          >
+            <Lock size={16} /> Lock
+          </button>
         </header>
 
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
@@ -919,7 +1014,6 @@ const ParentsView = () => {
           </form>
         </div>
 
-        {/* Add Reward Form & Kids forms remain similar */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
           <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Gift className="text-pink-500 bg-pink-100 rounded-full p-1" size={24} /> Create New Reward</h2>
           <form onSubmit={handleAddReward} className="flex flex-col gap-4">
@@ -1051,23 +1145,22 @@ export default function App() {
   const [currentView, setCurrentView] = useState('home');
   const [showCelebration, setShowCelebration] = useState(false);
 
+  // Initialize Auth
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
+        await signInAnonymously(auth);
       } catch (err) {
         console.error("Auth init failed:", err);
       }
     };
     initAuth();
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setAuthChecking(false);
     });
+
     return () => unsubscribe();
   }, []);
 
