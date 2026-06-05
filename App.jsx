@@ -71,7 +71,7 @@ const useFamilyData = (user) => {
 
   useEffect(() => {
     if (!user) return;
-    const baseRef = collection(db, 'artifacts', appId, 'users', user.uid, 'family_data');
+    const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
     
     const unsubs = [
       onSnapshot(collection(baseRef, 'profiles', 'docs'), (snap) => {
