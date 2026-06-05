@@ -736,6 +736,10 @@ const ParentsView = () => {
   
   const [adjustKidId, setAdjustKidId] = useState('');
   const [adjustAmount, setAdjustAmount] = useState(5);
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editTaskIcon, setEditTaskIcon] = useState('');
+  const [editTaskPoints, setEditTaskPoints] = useState(10);  
 
   const kids = profiles.filter(p => p.role === 'kid');
 
@@ -802,6 +806,24 @@ const ParentsView = () => {
     await deleteDoc(ref);
   };
 
+  const handleDeleteTask = async (taskId) => {
+    if (!user) return;
+    const ref = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'tasks', 'docs', taskId);
+    await deleteDoc(ref);
+  };
+
+  const handleSaveEditTask = async (taskId) => {
+    if (!user || !editTaskTitle) return;
+    const ref = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'tasks', 'docs', taskId);
+    await updateDoc(ref, { 
+      title: editTaskTitle, 
+      icon: editTaskIcon, 
+      points: Number(editTaskPoints) 
+    });
+    setEditingTaskId(null);
+  };
+
+  
   const toggleAssignee = (kidId) => {
     setNewTaskAssignees(prev => prev.includes(kidId) ? prev.filter(id => id !== kidId) : [...prev, kidId]);
   };
@@ -1087,6 +1109,59 @@ const ParentsView = () => {
             </div>
          </div>
 
+
+{/* Manage Active Quests */}
+         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex-1 flex flex-col max-h-[300px] mb-6">
+            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Sparkles className="text-indigo-400" size={24} /> Manage Quests</h2>
+            <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-2 hide-scrollbar">
+              {tasks.length === 0 ? (
+                <p className="text-slate-400 font-medium text-center py-4">No active quests.</p>
+              ) : (
+                tasks.map(task => {
+                  const assignee = kids.find(k => k.id === task.assigneeId);
+                  return (
+                    <div key={task.id} className="flex flex-col gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100 group shrink-0">
+                      {editingTaskId === task.id ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <input type="text" value={editTaskIcon} onChange={e => setEditTaskIcon(e.target.value)} className="w-10 text-center bg-white border border-slate-300 rounded-lg outline-none focus:border-indigo-400" maxLength={2} />
+                            <input type="text" value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} className="flex-1 px-2 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400" />
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <input type="number" value={editTaskPoints} onChange={e => setEditTaskPoints(e.target.value)} className="w-16 px-2 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400" />
+                            <span className="text-xs font-bold text-slate-400">Stars</span>
+                            <div className="ml-auto flex gap-2">
+                              <button onClick={() => handleSaveEditTask(task.id)} className="bg-indigo-500 text-white p-2 rounded-lg hover:bg-indigo-600"><Check size={16} /></button>
+                              <button onClick={() => setEditingTaskId(null)} className="bg-slate-300 text-slate-700 p-2 rounded-lg hover:bg-slate-400"><X size={16} /></button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm">{task.icon}</div>
+                            <div>
+                              <p className="font-bold text-slate-700 text-sm truncate max-w-[150px]">{task.title}</p>
+                              <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                <Star size={10} className="fill-yellow-400 text-yellow-400" /> {task.points} • {assignee?.name || 'Missing'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => { setEditingTaskId(task.id); setEditTaskTitle(task.title); setEditTaskIcon(task.icon); setEditTaskPoints(task.points); }} className="text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 p-1.5 rounded-lg"><Edit2 size={16} /></button>
+                            <button onClick={() => handleDeleteTask(task.id)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={16} /></button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+         </div>
+
+
+        
          {/* Store Management */}
          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex-1 flex flex-col max-h-[300px]">
             <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><StoreIcon className="text-slate-400" size={24} /> Active Store Items</h2>
