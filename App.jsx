@@ -845,31 +845,45 @@ const ParentsView = () => {
   };
 
   const handleAdjustStars = async (e, type) => {
-  e.preventDefault();
-  if (!user || !adjustKidId || !adjustAmount) return;
-  const kidProfile = profiles.find(p => p.id === adjustKidId);
-  if (!kidProfile) return;
-  
-  let amount = Number(adjustAmount);
-  if (type === 'subtract') amount = -amount;
+    e.preventDefault();
+    
+    // Let's add a friendly popup if a kid is not selected!
+    if (!adjustKidId) {
+      alert("Please select a child from the dropdown first!");
+      return;
+    }
+    
+    if (!user || !adjustAmount) return;
+    
+    const kidProfile = profiles.find(p => p.id === adjustKidId);
+    if (!kidProfile) return;
+    
+    let amount = Number(adjustAmount);
+    if (type === 'subtract') amount = -amount;
 
-  const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
-  const profileRef = doc(baseRef, 'profiles', 'docs', kidProfile.id);
-  const historyRef = doc(baseRef, 'history', 'docs');
-  const todayStr = getLocalDateString();
-  const batch = writeBatch(db);
+    const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
+    
+    // Here is the completely fixed Firebase path formatting!
+    const profileRef = doc(collection(baseRef, 'profiles', 'docs'), kidProfile.id);
+    const historyRef = doc(collection(baseRef, 'history', 'docs'));
+    
+    const todayStr = getLocalDateString();
+    const batch = writeBatch(db);
 
-  batch.update(profileRef, { points: Math.max(0, kidProfile.points + amount) });
-  batch.set(historyRef, {
-    kidId: kidProfile.id, taskId: `manual-${Date.now()}`, taskTitle: amount > 0 ? 'Bonus Stars!' : 'Star Adjustment',
-    points: amount, date: todayStr, timestamp: serverTimestamp()
-  });
+    batch.update(profileRef, { points: Math.max(0, kidProfile.points + amount) });
+    batch.set(historyRef, {
+      kidId: kidProfile.id, taskId: `manual-${Date.now()}`, taskTitle: amount > 0 ? 'Bonus Stars!' : 'Star Adjustment',
+      points: amount, date: todayStr, timestamp: serverTimestamp()
+    });
 
-  try {
-    await batch.commit();
-    setAdjustAmount(5);
-  } catch (error) { console.error("Error adjusting stars:", error); }
-};
+    try {
+      await batch.commit();
+      setAdjustAmount(5);
+      alert(`Success! Stars updated for ${kidProfile.name}.`); // A nice confirmation message!
+    } catch (error) { 
+      console.error("Error adjusting stars:", error); 
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto h-full pb-8 flex flex-col xl:flex-row gap-8">
