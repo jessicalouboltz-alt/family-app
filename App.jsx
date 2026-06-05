@@ -4,7 +4,8 @@ import {
   Star, Gift, Check, Home, User, Settings, 
   Sparkles, CheckCircle, ChevronRight, Plus, 
   Trophy, Heart, Target, Calendar as CalendarIcon,
-  X, Clock, Trash2, AlertCircle, Lock, Delete, Edit2, Minus
+  X, Clock, Trash2, AlertCircle, Lock, Delete, Edit2, Minus,
+  Store as StoreIcon // Add this right here!
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -14,19 +15,28 @@ import {
   onSnapshot, deleteDoc, writeBatch, serverTimestamp
 } from 'firebase/firestore';
 
+
 // ============================================================================
 // FIREBASE SETUP
 // ============================================================================
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'family-app-dev';
+const appId = import.meta.env.VITE_APP_ID || 'family-app-dev';
 
 // Initial Data for fresh databases
 const INITIAL_PROFILES = [
-  { id: 'kid-1', name: 'Lucas', avatar: '🦖', color: 'bg-emerald-100 text-emerald-700', points: 55, targetRewardId: 'reward-2', role: 'kid' },
-  { id: 'kid-2', name: 'Addie', avatar: '🦄', color: 'bg-purple-100 text-purple-700', points: 55, targetRewardId: 'reward-1', role: 'kid' }
+  { id: 'kid-1', name: 'Leo', avatar: '🦖', color: 'bg-emerald-100 text-emerald-700', points: 120, targetRewardId: 'reward-2', role: 'kid' },
+  { id: 'kid-2', name: 'Mia', avatar: '🦄', color: 'bg-purple-100 text-purple-700', points: 85, targetRewardId: 'reward-1', role: 'kid' }
 ];
 
 const INITIAL_TASKS = [
