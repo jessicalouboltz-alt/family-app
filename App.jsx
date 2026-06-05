@@ -106,7 +106,7 @@ const useFamilyData = (user) => {
     if (profiles.length === 0 && tasks.length === 0) {
       const seedDatabase = async () => {
         const batch = writeBatch(db);
-        const baseRef = collection(db, 'artifacts', appId, 'users', user.uid, 'family_data');
+        const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
         INITIAL_PROFILES.forEach(p => batch.set(doc(collection(baseRef, 'profiles', 'docs'), p.id), p));
         INITIAL_TASKS.forEach(t => batch.set(doc(collection(baseRef, 'tasks', 'docs'), t.id), t));
         INITIAL_REWARDS.forEach(r => batch.set(doc(collection(baseRef, 'rewards', 'docs'), r.id), r));
@@ -344,7 +344,7 @@ const DashboardView = ({ triggerCelebration }) => {
   const handleCompleteTask = async (task) => {
     if (!user || !activeProfile || task.status === 'pending') return;
     
-    const baseRef = collection(db, 'artifacts', appId, 'users', user.uid, 'family_data');
+    const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
     const taskRef = doc(collection(baseRef, 'tasks', 'docs'), task.id);
     
     if (task.requiresApproval) {
@@ -465,13 +465,13 @@ const RewardsView = () => {
 
   const handleSetTarget = async (reward) => {
     if (!user || !activeProfile) return;
-    const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'profiles', 'docs', activeProfile.id);
+    const profileRef = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'profiles', 'docs', activeProfile.id);
     await updateDoc(profileRef, { targetRewardId: reward.id });
   };
 
   const handleRedeem = async (reward) => {
     if (!user || !activeProfile || activeProfile.points < reward.cost) return;
-    const baseRef = collection(db, 'artifacts', appId, 'users', user.uid, 'family_data');
+    const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
     const profileRef = doc(collection(baseRef, 'profiles', 'docs'), activeProfile.id);
     const redemptionRef = doc(collection(baseRef, 'redemptions', 'docs'));
     const batch = writeBatch(db);
@@ -744,7 +744,7 @@ const ParentsView = () => {
   // --- ACTIONS ---
   const handleApproveRedemption = async (redemptionId) => {
     if (!user) return;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'redemptions', 'docs', redemptionId);
+    const ref = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'redemptions', 'docs', redemptionId);
     await updateDoc(ref, { status: 'approved' });
   };
 
@@ -752,7 +752,7 @@ const ParentsView = () => {
     if (!user) return;
     const kidProfile = profiles.find(p => p.id === task.assigneeId);
     if (!kidProfile) return;
-    const baseRef = collection(db, 'artifacts', appId, 'users', user.uid, 'family_data');
+    const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
     const taskRef = doc(collection(baseRef, 'tasks', 'docs'), task.id);
     const profileRef = doc(collection(baseRef, 'profiles', 'docs'), kidProfile.id);
     const historyRef = doc(collection(baseRef, 'history', 'docs'));
@@ -776,7 +776,7 @@ const ParentsView = () => {
 
   const handleRejectTask = async (taskId) => {
     if (!user) return;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'tasks', 'docs', taskId);
+    const ref = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'tasks', 'docs', taskId);
     await updateDoc(ref, { status: 'rejected' });
   };
 
@@ -791,14 +791,14 @@ const ParentsView = () => {
 
   const handleSaveEditKid = async (kidId) => {
     if (!user || !editKidName) return;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'profiles', 'docs', kidId);
+    const ref = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'profiles', 'docs', kidId);
     await updateDoc(ref, { name: editKidName, avatar: editKidEmoji });
     setEditingKidId(null);
   };
 
   const handleDeleteKid = async (kidId) => {
     if (!user) return;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'profiles', 'docs', kidId);
+    const ref = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'profiles', 'docs', kidId);
     await deleteDoc(ref);
   };
 
@@ -812,7 +812,7 @@ const ParentsView = () => {
       alert("Please select at least one child!");
       return;
     }
-    const baseRef = collection(db, 'artifacts', appId, 'users', user.uid, 'family_data');
+    const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
     const batch = writeBatch(db);
 
     // Create a unique task for EACH selected child
@@ -833,14 +833,14 @@ const ParentsView = () => {
     e.preventDefault();
     if (!user || !newRewardTitle) return;
     const newId = `reward-${Date.now()}`;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'rewards', 'docs', newId);
+    const ref = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'rewards', 'docs', newId);
     await setDoc(ref, { id: newId, title: newRewardTitle, cost: Number(newRewardCost), icon: newRewardIcon, color: newRewardColor });
     setNewRewardTitle('');
   };
 
   const handleDeleteReward = async (rewardId) => {
     if (!user) return;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'rewards', 'docs', rewardId);
+    const ref = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'rewards', 'docs', rewardId);
     await deleteDoc(ref);
   };
 
@@ -853,7 +853,7 @@ const ParentsView = () => {
     let amount = Number(adjustAmount);
     if (type === 'subtract') amount = -amount;
 
-    const baseRef = collection(db, 'artifacts', appId, 'users', user.uid, 'family_data');
+    const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
     const profileRef = doc(baseRef, 'profiles', 'docs', kidProfile.id);
     const historyRef = doc(baseRef, 'history', 'docs');
     const todayStr = getLocalDateString();
