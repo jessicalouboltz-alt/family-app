@@ -181,22 +181,24 @@ const Sidebar = ({ currentView, setCurrentView }) => {
   ];
 
   return (
-    <div className="w-24 md:w-32 bg-white h-full shadow-sm rounded-r-[3rem] flex flex-col items-center py-8 gap-8 z-10 relative shrink-0">
-      <div className="w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-2xl flex items-center justify-center shadow-md mb-4 text-white">
+    <div className="w-full md:w-32 bg-white h-24 md:h-full shadow-[0_-4px_25px_-5px_rgba(0,0,0,0.1)] md:shadow-sm rounded-t-[2rem] md:rounded-t-none md:rounded-r-[3rem] flex flex-row md:flex-col items-center justify-around md:justify-start py-2 md:py-8 z-50 fixed bottom-0 left-0 md:relative shrink-0">
+      {/* The logo heart stays hidden on mobile to save space! */}
+      <div className="hidden md:flex w-16 h-16 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-2xl items-center justify-center shadow-md mb-4 text-white">
         <Heart size={32} fill="currentColor" />
       </div>
-      <div className="flex flex-col gap-6 w-full px-4">
+      
+      <div className="flex flex-row md:flex-col justify-around md:justify-start md:gap-6 w-full px-2 md:px-4">
         {navItems.map(({ id, icon: Icon, label }) => {
           const isActive = currentView === id;
           return (
             <button
               key={id} onClick={() => setCurrentView(id)}
-              className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-300 ${
+              className={`flex flex-col items-center justify-center gap-1 md:gap-2 p-2 md:p-3 rounded-2xl transition-all duration-300 w-[4.5rem] md:w-full ${
                 isActive ? 'bg-indigo-50 text-indigo-600 scale-110 shadow-sm' : 'text-slate-400 hover:bg-slate-50'
               }`}
             >
-              <Icon size={28} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-xs font-bold tracking-wide">{label}</span>
+              <Icon size={24} className="md:w-7 md:h-7" strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-[10px] md:text-xs font-bold tracking-wide">{label}</span>
             </button>
           );
         })}
@@ -1302,9 +1304,12 @@ export default function App() {
 
   return (
     <FamilyContext.Provider value={familyData}>
-      <div className="min-h-screen bg-slate-50 font-sans flex text-slate-800 overflow-hidden selection:bg-indigo-100">
+      {/* Changed flex to flex-col on mobile and used 100dvh for better mobile browser height */}
+      <div className="min-h-[100dvh] bg-slate-50 font-sans flex flex-col md:flex-row text-slate-800 overflow-hidden selection:bg-indigo-100">
         <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
-        <main className="flex-1 h-screen overflow-y-auto px-4 md:px-8 py-8 relative">
+        
+        {/* Added pb-32 padding so the bottom menu doesn't cover up the last quests */}
+        <main className="flex-1 h-[100dvh] overflow-y-auto px-4 md:px-8 pt-8 pb-32 md:pb-8 relative">
           
           {currentView !== 'parents' && currentView !== 'calendar' && currentView !== 'home' && (
             <div className="mb-10 max-w-5xl mx-auto flex items-center justify-between">
