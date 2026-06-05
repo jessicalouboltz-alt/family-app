@@ -778,6 +778,7 @@ const ParentsView = () => {
   
   const [adjustKidId, setAdjustKidId] = useState('');
   const [adjustAmount, setAdjustAmount] = useState(5);
+  const [adjustReason, setAdjustReason] = useState('');
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editTaskIcon, setEditTaskIcon] = useState('');
@@ -923,7 +924,6 @@ const ParentsView = () => {
   const handleAdjustStars = async (e, type) => {
     e.preventDefault();
     
-    // Let's add a friendly popup if a kid is not selected!
     if (!adjustKidId) {
       alert("Please select a child from the dropdown first!");
       return;
@@ -938,24 +938,33 @@ const ParentsView = () => {
     if (type === 'subtract') amount = -amount;
 
     const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
-    
-    // Here is the completely fixed Firebase path formatting!
     const profileRef = doc(collection(baseRef, 'profiles', 'docs'), kidProfile.id);
     const historyRef = doc(collection(baseRef, 'history', 'docs'));
     
     const todayStr = getLocalDateString();
     const batch = writeBatch(db);
 
+    // Look for a custom reason, or use the default text
+    let historyTitle = adjustReason.trim();
+    if (!historyTitle) {
+       historyTitle = amount > 0 ? 'Bonus Stars!' : 'Star Adjustment';
+    }
+
     batch.update(profileRef, { points: Math.max(0, kidProfile.points + amount) });
     batch.set(historyRef, {
-      kidId: kidProfile.id, taskId: `manual-${Date.now()}`, taskTitle: amount > 0 ? 'Bonus Stars!' : 'Star Adjustment',
-      points: amount, date: todayStr, timestamp: serverTimestamp()
+      kidId: kidProfile.id, 
+      taskId: `manual-${Date.now()}`, 
+      taskTitle: historyTitle, // This uses your custom text!
+      points: amount, 
+      date: todayStr, 
+      timestamp: serverTimestamp()
     });
 
     try {
       await batch.commit();
       setAdjustAmount(5);
-      alert(`Success! Stars updated for ${kidProfile.name}.`); // A nice confirmation message!
+      setAdjustReason(''); // Clear the text box for next time
+      alert(`Success! Stars updated for ${kidProfile.name}.`);
     } catch (error) { 
       console.error("Error adjusting stars:", error); 
     }
@@ -1028,26 +1037,29 @@ const ParentsView = () => {
           </form>
         </div>
 
-        {/* 2. Adjust Stars Form (Updated) */}
+        {/* 2. Adjust Stars Form (Updated with Reason) */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
           <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Star className="text-yellow-500 bg-yellow-100 rounded-full p-1" size={24} /> Adjust Star Balance</h2>
-          <form className="flex flex-col md:flex-row gap-4">
-            <select value={adjustKidId} onChange={e => setAdjustKidId(e.target.value)} className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-400">
-              <option value="" disabled>Select child...</option>
-              {kids.map(k => <option key={k.id} value={k.id}>{k.name} (Current: {k.points} ⭐)</option>)}
-            </select>
-            
-            <div className="flex flex-1 gap-2">
-              <input type="number" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} min="1" className="w-24 text-center px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-400" required placeholder="Amount" />
+          <form className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <select value={adjustKidId} onChange={e => setAdjustKidId(e.target.value)} className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-400">
+                <option value="" disabled>Select child...</option>
+                {kids.map(k => <option key={k.id} value={k.id}>{k.name} (Current: {k.points} ⭐)</option>)}
+              </select>
+              
               <div className="flex flex-1 gap-2">
-                <button type="button" onClick={(e) => handleAdjustStars(e, 'add')} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-2 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1">
-                  <Plus size={18} /> Add
-                </button>
-                <button type="button" onClick={(e) => handleAdjustStars(e, 'subtract')} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold px-2 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1">
-                  <Minus size={18} /> Remove
-                </button>
+                <input type="number" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} min="1" className="w-24 text-center px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-400" required placeholder="Amount" />
+                <div className="flex flex-1 gap-2">
+                  <button type="button" onClick={(e) => handleAdjustStars(e, 'add')} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-2 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1">
+                    <Plus size={18} /> Add
+                  </button>
+                  <button type="button" onClick={(e) => handleAdjustStars(e, 'subtract')} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold px-2 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1">
+                    <Minus size={18} /> Remove
+                  </button>
+                </div>
               </div>
             </div>
+            <input type="text" value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder="Reason for adjustment (optional)..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-400 text-sm" />
           </form>
         </div>
 
