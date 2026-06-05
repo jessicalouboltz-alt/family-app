@@ -784,7 +784,7 @@ const ParentsView = () => {
     e.preventDefault();
     if (!user || !newKidName) return;
     const newId = `kid-${Date.now()}`;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'profiles', 'docs', newId);
+    const ref = doc(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data', 'profiles', 'docs', newId);
     await setDoc(ref, { id: newId, name: newKidName, avatar: newKidEmoji, color: 'bg-emerald-100 text-emerald-700', points: 0, targetRewardId: null, role: 'kid' });
     setNewKidName('');
   };
