@@ -4,7 +4,7 @@ import {
   Star, Gift, Check, Home, User, Settings, 
   Sparkles, CheckCircle, ChevronRight, Plus, 
   Trophy, Heart, Target, Calendar as CalendarIcon,
-  X, Clock, Trash2, AlertCircle, Lock, Delete
+  X, Clock, Trash2, AlertCircle, Lock, Delete, Edit2, Minus
 } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
@@ -14,39 +14,29 @@ import {
   onSnapshot, deleteDoc, writeBatch, serverTimestamp
 } from 'firebase/firestore';
 
-// --- PRODUCTION FIREBASE SETUP ---
-// PASTE YOUR ACTUAL KEYS INSIDE THESE QUOTES:
-const firebaseConfig = {
-  apiKey: "AIzaSyAFIhZRIMvniJXKXgtYLXsE5QK53X7sr6g",
-  authDomain: "familyapp-2b16c.firebaseapp.com",
-  projectId: "familyapp-2b16c",
-  storageBucket: "familyapp-2b16c.firebasestorage.app",
-  messagingSenderId: "179825100786",
-  appId: "1:179825100786:web:776abb498c8dbaeaa4cd6b"
-};
-
+// ============================================================================
+// FIREBASE SETUP
+// ============================================================================
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = 'family-app-prod';
-// ---------------------------------
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'family-app-dev';
 
+// Initial Data for fresh databases
 const INITIAL_PROFILES = [
-  { id: 'kid-1', name: 'Lucas', avatar: '🦖', color: 'bg-emerald-100 text-emerald-700', points: 120, targetRewardId: 'reward-2', role: 'kid' },
-  { id: 'kid-2', name: 'Addie', avatar: '🦄', color: 'bg-purple-100 text-purple-700', points: 85, targetRewardId: 'reward-1', role: 'kid' }
+  { id: 'kid-1', name: 'Leo', avatar: '🦖', color: 'bg-emerald-100 text-emerald-700', points: 120, targetRewardId: 'reward-2', role: 'kid' },
+  { id: 'kid-2', name: 'Mia', avatar: '🦄', color: 'bg-purple-100 text-purple-700', points: 85, targetRewardId: 'reward-1', role: 'kid' }
 ];
 
 const INITIAL_TASKS = [
   { id: 'task-1', title: 'Make your bed', points: 10, assigneeId: 'kid-1', completed: false, status: 'active', requiresApproval: false, icon: '🛏️', frequency: 'daily' },
   { id: 'task-2', title: 'Feed the dog', points: 15, assigneeId: 'kid-1', completed: false, status: 'active', requiresApproval: true, icon: '🐕', frequency: 'daily' },
-  { id: 'task-3', title: 'Read for 20 mins', points: 20, assigneeId: 'kid-2', completed: false, status: 'active', requiresApproval: false, icon: '📚', frequency: 'daily' },
-  { id: 'task-4', title: 'Put away toys', points: 10, assigneeId: 'kid-2', completed: false, status: 'active', requiresApproval: true, icon: '🧸', frequency: 'daily' },
 ];
 
 const INITIAL_REWARDS = [
   { id: 'reward-1', title: 'Extra Screen Time', cost: 100, icon: '🎮', color: 'bg-blue-100' },
   { id: 'reward-2', title: 'Ice Cream Trip', cost: 250, icon: '🍦', color: 'bg-pink-100' },
-  { id: 'reward-3', title: 'New Lego Set', cost: 1000, icon: '🧱', color: 'bg-yellow-100' },
 ];
 
 const getLocalDateString = (date = new Date()) => {
@@ -54,6 +44,9 @@ const getLocalDateString = (date = new Date()) => {
   return new Date(date.getTime() - offset).toISOString().split('T')[0];
 };
 
+// ============================================================================
+// STATE & CONTEXT
+// ============================================================================
 const FamilyContext = createContext(null);
 
 const useFamilyData = (user) => {
@@ -116,14 +109,15 @@ const useFamilyData = (user) => {
   return { profiles, tasks, rewards, redemptions, history, dailyStars, loading, activeKidId, setActiveKidId, user };
 };
 
+// ============================================================================
+// ANIMATIONS & UTILS
+// ============================================================================
 const ConfettiParticle = ({ delay, color, x, y }) => (
   <motion.div
     initial={{ opacity: 1, scale: 0, x: '50vw', y: '50vh' }}
     animate={{ 
-      opacity: 0, 
-      scale: [0, 1.5, 0],
-      x: `calc(50vw + ${x}px)`, 
-      y: `calc(50vh + ${y}px)`,
+      opacity: 0, scale: [0, 1.5, 0],
+      x: `calc(50vw + ${x}px)`, y: `calc(50vh + ${y}px)`,
       rotate: [0, 180, 360]
     }}
     transition={{ duration: 1.5, delay, ease: "easeOut" }}
@@ -152,8 +146,7 @@ const CelebrationOverlay = ({ show, onComplete }) => {
   return (
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden flex items-center justify-center bg-white/20 backdrop-blur-sm">
       <motion.div 
-        initial={{ scale: 0, opacity: 0, y: 50 }}
-        animate={{ scale: [0, 1.2, 1], opacity: [0, 1, 1, 0], y: 0 }}
+        initial={{ scale: 0, opacity: 0, y: 50 }} animate={{ scale: [0, 1.2, 1], opacity: [0, 1, 1, 0], y: 0 }}
         transition={{ duration: 2, times: [0, 0.2, 0.8, 1] }}
         className="text-6xl md:text-8xl font-black text-yellow-400 drop-shadow-2xl flex flex-col items-center gap-4 text-center"
       >
@@ -165,10 +158,9 @@ const CelebrationOverlay = ({ show, onComplete }) => {
   );
 };
 
-const StoreIcon = ({ size, className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/></svg>
-);
-
+// ============================================================================
+// UI COMPONENTS
+// ============================================================================
 const Sidebar = ({ currentView, setCurrentView }) => {
   const navItems = [
     { id: 'home', icon: Home, label: 'Home' },
@@ -188,8 +180,7 @@ const Sidebar = ({ currentView, setCurrentView }) => {
           const isActive = currentView === id;
           return (
             <button
-              key={id}
-              onClick={() => setCurrentView(id)}
+              key={id} onClick={() => setCurrentView(id)}
               className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all duration-300 ${
                 isActive ? 'bg-indigo-50 text-indigo-600 scale-110 shadow-sm' : 'text-slate-400 hover:bg-slate-50'
               }`}
@@ -214,20 +205,14 @@ const KidSelector = () => {
         const isActive = activeKidId === kid.id;
         return (
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            key={kid.id}
-            onClick={() => setActiveKidId(kid.id)}
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            key={kid.id} onClick={() => setActiveKidId(kid.id)}
             className={`flex items-center gap-3 px-6 py-3 rounded-full transition-all duration-300 border-2 ${
-              isActive 
-                ? 'bg-white border-indigo-200 shadow-md ring-4 ring-indigo-50' 
-                : 'bg-white/50 border-transparent text-slate-500 hover:bg-white/80'
+              isActive ? 'bg-white border-indigo-200 shadow-md ring-4 ring-indigo-50' : 'bg-white/50 border-transparent text-slate-500 hover:bg-white/80'
             }`}
           >
             <span className="text-3xl">{kid.avatar}</span>
-            <span className={`text-xl font-extrabold ${isActive ? 'text-slate-800' : 'text-slate-500'}`}>
-              {kid.name}
-            </span>
+            <span className={`text-xl font-extrabold ${isActive ? 'text-slate-800' : 'text-slate-500'}`}>{kid.name}</span>
           </motion.button>
         );
       })}
@@ -235,6 +220,11 @@ const KidSelector = () => {
   );
 };
 
+// ============================================================================
+// MAIN VIEWS
+// ============================================================================
+
+// --- HOME VIEW ---
 const HomeView = ({ setCurrentView, setActiveKidId }) => {
   const { profiles, dailyStars } = useContext(FamilyContext);
   const kids = profiles.filter(p => p.role === 'kid');
@@ -248,7 +238,6 @@ const HomeView = ({ setCurrentView, setActiveKidId }) => {
     const d = new Date(startOfWeek);
     d.setDate(startOfWeek.getDate() + i);
     return {
-      date: d,
       dateStr: getLocalDateString(d),
       dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()],
       dayNum: d.getDate(),
@@ -264,41 +253,28 @@ const HomeView = ({ setCurrentView, setActiveKidId }) => {
       </header>
 
       <section>
-         <div 
-           onClick={() => setCurrentView('calendar')}
-           className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 cursor-pointer hover:border-indigo-200 transition-all group relative overflow-hidden"
-         >
+         <div onClick={() => setCurrentView('calendar')} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 cursor-pointer hover:border-indigo-200 transition-all group relative overflow-hidden">
            <div className="absolute -right-10 -top-10 text-indigo-50 opacity-50 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
              <CalendarIcon size={200} />
            </div>
            <div className="flex justify-between items-center mb-6 relative z-10">
              <h2 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2">
-               <CalendarIcon className="text-indigo-400 group-hover:scale-110 transition-transform" />
-               This Week
+               <CalendarIcon className="text-indigo-400 group-hover:scale-110 transition-transform" /> This Week
              </h2>
              <span className="text-indigo-500 font-bold flex items-center text-sm group-hover:translate-x-1 transition-transform">
                Full Calendar <ChevronRight size={16} />
              </span>
            </div>
-           
            <div className="grid grid-cols-7 gap-2 md:gap-4 relative z-10">
              {weekDays.map(day => {
                const starsOnDay = dailyStars.filter(s => s.date === day.dateStr && s.allCompleted);
                return (
-                 <div 
-                   key={day.dateStr} 
-                   className={`flex flex-col items-center justify-center p-3 md:p-4 rounded-2xl border-2 transition-colors ${
-                     day.isToday 
-                       ? 'bg-indigo-50 border-indigo-200 shadow-sm' 
-                       : 'bg-slate-50 border-transparent hover:bg-slate-100'
+                 <div key={day.dateStr} className={`flex flex-col items-center justify-center p-3 md:p-4 rounded-2xl border-2 transition-colors ${
+                     day.isToday ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-slate-50 border-transparent hover:bg-slate-100'
                    }`}
                  >
-                   <span className={`font-bold text-xs uppercase mb-1 ${day.isToday ? 'text-indigo-400' : 'text-slate-400'}`}>
-                     {day.dayName}
-                   </span>
-                   <span className={`text-2xl md:text-3xl font-black ${day.isToday ? 'text-indigo-700' : 'text-slate-700'}`}>
-                     {day.dayNum}
-                   </span>
+                   <span className={`font-bold text-xs uppercase mb-1 ${day.isToday ? 'text-indigo-400' : 'text-slate-400'}`}>{day.dayName}</span>
+                   <span className={`text-2xl md:text-3xl font-black ${day.isToday ? 'text-indigo-700' : 'text-slate-700'}`}>{day.dayNum}</span>
                    <div className="h-4 mt-2 flex -space-x-1">
                      {starsOnDay.slice(0, 3).map((star, idx) => (
                        <Star key={idx} size={12} className="text-yellow-400 fill-yellow-400 drop-shadow-sm" />
@@ -324,20 +300,9 @@ const HomeView = ({ setCurrentView, setActiveKidId }) => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {kids.map(kid => (
-              <motion.div
-                key={kid.id}
-                whileHover={{ scale: 1.02, y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setActiveKidId(kid.id);
-                  setCurrentView('dashboard');
-                }}
-                className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 cursor-pointer hover:border-emerald-200 transition-all flex items-center gap-6 group"
-              >
+              <motion.div key={kid.id} whileHover={{ scale: 1.02, y: -4 }} whileTap={{ scale: 0.98 }} onClick={() => { setActiveKidId(kid.id); setCurrentView('dashboard'); }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 cursor-pointer hover:border-emerald-200 transition-all flex items-center gap-6 group">
                 <div className={`text-5xl w-24 h-24 rounded-3xl flex items-center justify-center shadow-inner ${kid.color}`}>
-                  <motion.div group-hover={{ rotate: 10 }} transition={{ type: "spring" }}>
-                    {kid.avatar}
-                  </motion.div>
+                  <motion.div group-hover={{ rotate: 10 }} transition={{ type: "spring" }}>{kid.avatar}</motion.div>
                 </div>
                 <div className="flex-1">
                   <h3 className="text-3xl font-black text-slate-800 mb-1 group-hover:text-emerald-600 transition-colors">{kid.name}</h3>
@@ -359,9 +324,9 @@ const HomeView = ({ setCurrentView, setActiveKidId }) => {
   );
 };
 
+// --- DASHBOARD VIEW ---
 const DashboardView = ({ triggerCelebration }) => {
   const { profiles, tasks, activeKidId, user } = useContext(FamilyContext);
-  
   const activeProfile = profiles.find(p => p.id === activeKidId);
   const activeTasks = tasks.filter(t => t.assigneeId === activeKidId && (t.status ? t.status !== 'completed' : !t.completed));
   const { rewards } = useContext(FamilyContext);
@@ -373,11 +338,8 @@ const DashboardView = ({ triggerCelebration }) => {
     const taskRef = doc(collection(baseRef, 'tasks', 'docs'), task.id);
     
     if (task.requiresApproval) {
-      try {
-        await updateDoc(taskRef, { status: 'pending' });
-      } catch (error) {
-        console.error("Error submitting task for approval:", error);
-      }
+      try { await updateDoc(taskRef, { status: 'pending' }); } 
+      catch (error) { console.error("Error submitting task for approval:", error); }
       return;
     }
 
@@ -389,22 +351,16 @@ const DashboardView = ({ triggerCelebration }) => {
     try {
       batch.update(taskRef, { completed: true, status: 'completed' });
       batch.update(profileRef, { points: activeProfile.points + task.points });
-      batch.set(historyRef, {
-        kidId: activeKidId, taskId: task.id, taskTitle: task.title, 
-        points: task.points, date: todayStr, timestamp: serverTimestamp()
-      });
+      batch.set(historyRef, { kidId: activeKidId, taskId: task.id, taskTitle: task.title, points: task.points, date: todayStr, timestamp: serverTimestamp() });
 
       const remainingTasks = activeTasks.filter(t => t.id !== task.id);
       if (remainingTasks.length === 0) {
         const starRef = doc(collection(baseRef, 'daily_stars', 'docs'), `${todayStr}_${activeKidId}`);
         batch.set(starRef, { date: todayStr, kidId: activeKidId, allCompleted: true });
       }
-
       await batch.commit();
       triggerCelebration();
-    } catch (error) {
-      console.error("Error completing task:", error);
-    }
+    } catch (error) { console.error("Error completing task:", error); }
   };
 
   if (!activeProfile) return <div className="p-8 text-slate-400 font-bold">Loading adventurer...</div>;
@@ -413,9 +369,7 @@ const DashboardView = ({ triggerCelebration }) => {
     <div className="max-w-5xl mx-auto h-full flex flex-col gap-8 pb-8">
       <header className="flex flex-col gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-800 flex items-center gap-3">
-            Hey, {activeProfile.name}! {activeProfile.avatar}
-          </h1>
+          <h1 className="text-4xl font-black text-slate-800 flex items-center gap-3">Hey, {activeProfile.name}! {activeProfile.avatar}</h1>
           <p className="text-lg text-slate-500 font-bold mt-1">Ready for today's quests?</p>
         </div>
         
@@ -425,11 +379,7 @@ const DashboardView = ({ triggerCelebration }) => {
              <div className="flex-1">
                 <p className="text-sm font-bold text-indigo-400 uppercase tracking-wider">Current Goal</p>
                 <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden mt-2">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((activeProfile.points / rewards.find(r => r.id === activeProfile.targetRewardId).cost) * 100, 100)}%` }}
-                    className="h-full bg-gradient-to-r from-indigo-400 to-purple-400 rounded-full"
-                  />
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${Math.min((activeProfile.points / rewards.find(r => r.id === activeProfile.targetRewardId).cost) * 100, 100)}%` }} className="h-full bg-gradient-to-r from-indigo-400 to-purple-400 rounded-full" />
                 </div>
              </div>
              <div className="flex items-center gap-1 text-slate-800 font-black text-2xl">
@@ -441,10 +391,7 @@ const DashboardView = ({ triggerCelebration }) => {
       </header>
 
       <section className="flex-1">
-        <h2 className="text-2xl font-extrabold text-slate-800 mb-6 flex items-center gap-2">
-          <Sparkles className="text-indigo-400" /> Active Quests
-        </h2>
-        
+        <h2 className="text-2xl font-extrabold text-slate-800 mb-6 flex items-center gap-2"><Sparkles className="text-indigo-400" /> Active Quests</h2>
         {activeTasks.length === 0 ? (
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-100 rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-4 shadow-sm">
             <Trophy size={80} className="text-emerald-400 drop-shadow-sm mb-2" />
@@ -459,67 +406,34 @@ const DashboardView = ({ triggerCelebration }) => {
                 const isRejected = task.status === 'rejected';
 
                 return (
-                  <motion.div
-                    key={task.id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    whileHover={isPending ? {} : { scale: 1.02, y: -4 }}
-                    whileTap={isPending ? {} : { scale: 0.98 }}
-                    onClick={() => handleCompleteTask(task)}
+                  <motion.div key={task.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8 }} whileHover={isPending ? {} : { scale: 1.02, y: -4 }} whileTap={isPending ? {} : { scale: 0.98 }} onClick={() => handleCompleteTask(task)}
                     className={`rounded-3xl p-6 shadow-sm border cursor-pointer flex flex-col justify-between aspect-square group transition-all relative overflow-hidden ${
-                      isPending ? 'bg-slate-50 border-slate-200 opacity-80 cursor-not-allowed' :
-                      isRejected ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 hover:border-indigo-100'
+                      isPending ? 'bg-slate-50 border-slate-200 opacity-80 cursor-not-allowed' : isRejected ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 hover:border-indigo-100'
                     }`}
                   >
-                    {isPending && (
-                      <div className="absolute top-0 left-0 w-full bg-slate-200 text-slate-600 text-[10px] font-black uppercase py-1 text-center flex items-center justify-center gap-1 z-10">
-                        <Clock size={12} /> Waiting on Parent
-                      </div>
-                    )}
-                    {isRejected && (
-                      <div className="absolute top-0 left-0 w-full bg-red-500 text-white text-[10px] font-black uppercase py-1 text-center flex items-center justify-center gap-1 z-10">
-                        <AlertCircle size={12} /> Try Again
-                      </div>
-                    )}
+                    {isPending && ( <div className="absolute top-0 left-0 w-full bg-slate-200 text-slate-600 text-[10px] font-black uppercase py-1 text-center flex items-center justify-center gap-1 z-10"><Clock size={12} /> Waiting on Parent</div> )}
+                    {isRejected && ( <div className="absolute top-0 left-0 w-full bg-red-500 text-white text-[10px] font-black uppercase py-1 text-center flex items-center justify-center gap-1 z-10"><AlertCircle size={12} /> Try Again</div> )}
 
                     <div className={`flex justify-between items-start ${isPending || isRejected ? 'mt-4' : ''}`}>
                       <div className={`text-5xl w-20 h-20 rounded-2xl flex items-center justify-center transition-transform duration-300 relative ${isPending ? 'bg-slate-100 grayscale' : isRejected ? 'bg-red-100' : 'bg-slate-50 group-hover:rotate-12'}`}>
                         {task.icon}
                         {task.frequency && task.frequency !== 'once' && (
-                          <span className={`absolute -top-2 -right-2 text-[10px] font-black uppercase px-2 py-1 rounded-lg shadow-sm border ${
-                            isPending ? 'bg-slate-200 text-slate-500 border-slate-300' : 
-                            isRejected ? 'bg-red-200 text-red-700 border-red-300' : 
-                            'bg-indigo-100 text-indigo-600 border-indigo-200'
-                          }`}>
+                          <span className={`absolute -top-2 -right-2 text-[10px] font-black uppercase px-2 py-1 rounded-lg shadow-sm border ${isPending ? 'bg-slate-200 text-slate-500 border-slate-300' : isRejected ? 'bg-red-200 text-red-700 border-red-300' : 'bg-indigo-100 text-indigo-600 border-indigo-200'}`}>
                             {task.frequency}
                           </span>
                         )}
                       </div>
-                      <div className={`font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm ${
-                        isPending ? 'bg-slate-200 text-slate-500' : isRejected ? 'bg-red-200 text-red-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        <Star size={16} className={isPending ? 'text-slate-400 fill-slate-400' : isRejected ? 'text-red-500 fill-red-500' : 'fill-yellow-500 text-yellow-500'} />
-                        +{task.points}
+                      <div className={`font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm ${isPending ? 'bg-slate-200 text-slate-500' : isRejected ? 'bg-red-200 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        <Star size={16} className={isPending ? 'text-slate-400 fill-slate-400' : isRejected ? 'text-red-500 fill-red-500' : 'fill-yellow-500 text-yellow-500'} /> +{task.points}
                       </div>
                     </div>
-                    
                     <div className="mt-4">
-                      <h3 className={`text-xl font-extrabold leading-tight transition-colors ${
-                        isPending ? 'text-slate-500' : isRejected ? 'text-red-800' : 'text-slate-800 group-hover:text-indigo-600'
-                      }`}>
-                        {task.title}
-                      </h3>
+                      <h3 className={`text-xl font-extrabold leading-tight transition-colors ${isPending ? 'text-slate-500' : isRejected ? 'text-red-800' : 'text-slate-800 group-hover:text-indigo-600'}`}>{task.title}</h3>
                       <div className={`flex items-center gap-2 mt-3 font-bold ${isPending ? 'text-slate-400' : isRejected ? 'text-red-500' : 'text-slate-400'}`}>
-                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isPending ? 'border-slate-300 bg-slate-100' : isRejected ? 'border-red-300 bg-red-100' : 'border-slate-200 group-hover:bg-emerald-500 group-hover:border-emerald-500 group-hover:text-white'
-                        }`}>
+                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isPending ? 'border-slate-300 bg-slate-100' : isRejected ? 'border-red-300 bg-red-100' : 'border-slate-200 group-hover:bg-emerald-500 group-hover:border-emerald-500 group-hover:text-white'}`}>
                           {isPending ? <Clock size={16} strokeWidth={3} /> : isRejected ? <AlertCircle size={16} strokeWidth={3} /> : <Check size={16} strokeWidth={3} />}
                         </div>
-                        <span className={!isPending && !isRejected ? 'group-hover:text-emerald-500 transition-colors' : ''}>
-                          {isPending ? 'Pending' : isRejected ? 'Needs Fix' : 'Tap to finish'}
-                        </span>
+                        <span className={!isPending && !isRejected ? 'group-hover:text-emerald-500 transition-colors' : ''}>{isPending ? 'Pending' : isRejected ? 'Needs Fix' : 'Tap to finish'}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -533,6 +447,7 @@ const DashboardView = ({ triggerCelebration }) => {
   );
 };
 
+// --- REWARDS VIEW ---
 const RewardsView = () => {
   const { profiles, rewards, activeKidId, user } = useContext(FamilyContext);
   const activeProfile = profiles.find(p => p.id === activeKidId);
@@ -555,21 +470,16 @@ const RewardsView = () => {
       points: activeProfile.points - reward.cost,
       targetRewardId: activeProfile.targetRewardId === reward.id ? null : activeProfile.targetRewardId
     });
-
     batch.set(redemptionRef, {
-      kidId: activeKidId, kidName: activeProfile.name,
-      rewardId: reward.id, rewardTitle: reward.title,
-      cost: reward.cost, status: 'pending',
-      timestamp: serverTimestamp(), date: getLocalDateString()
+      kidId: activeKidId, kidName: activeProfile.name, rewardId: reward.id, rewardTitle: reward.title,
+      cost: reward.cost, status: 'pending', timestamp: serverTimestamp(), date: getLocalDateString()
     });
 
     try {
       await batch.commit();
       setNotification(`Requested "${reward.title}"! Parents will approve it soon.`);
       setTimeout(() => setNotification(null), 4000);
-    } catch (e) {
-      console.error("Error redeeming", e);
-    }
+    } catch (e) { console.error("Error redeeming", e); }
   };
 
   if (!activeProfile) return null;
@@ -578,10 +488,7 @@ const RewardsView = () => {
     <div className="max-w-5xl mx-auto h-full flex flex-col gap-8 pb-8 relative">
       <AnimatePresence>
         {notification && (
-          <motion.div 
-            initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -50 }}
-            className="absolute top-0 left-1/2 -translate-x-1/2 bg-emerald-500 text-white font-bold px-6 py-3 rounded-full shadow-lg z-50 flex items-center gap-2"
-          >
+          <motion.div initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -50 }} className="absolute top-0 left-1/2 -translate-x-1/2 bg-emerald-500 text-white font-bold px-6 py-3 rounded-full shadow-lg z-50 flex items-center gap-2">
             <CheckCircle size={20} /> {notification}
           </motion.div>
         )}
@@ -589,9 +496,7 @@ const RewardsView = () => {
 
       <header>
         <h1 className="text-4xl font-black text-slate-800">Reward Store 🎁</h1>
-        <p className="text-lg text-slate-500 font-bold mt-2">
-          You have <span className="text-yellow-500 font-black">{activeProfile.points}</span> stars to spend!
-        </p>
+        <p className="text-lg text-slate-500 font-bold mt-2">You have <span className="text-yellow-500 font-black">{activeProfile.points}</span> stars to spend!</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -599,35 +504,18 @@ const RewardsView = () => {
           const isTarget = activeProfile.targetRewardId === reward.id;
           const affordable = activeProfile.points >= reward.cost;
           return (
-            <motion.div 
-              key={reward.id} whileHover={{ scale: 1.02 }}
-              className={`rounded-3xl p-6 border-2 transition-all flex flex-col ${
-                isTarget ? 'bg-white border-indigo-400 shadow-lg ring-4 ring-indigo-50' : 'bg-white border-slate-100 shadow-sm'
-              }`}
-            >
+            <motion.div key={reward.id} whileHover={{ scale: 1.02 }} className={`rounded-3xl p-6 border-2 transition-all flex flex-col ${isTarget ? 'bg-white border-indigo-400 shadow-lg ring-4 ring-indigo-50' : 'bg-white border-slate-100 shadow-sm'}`}>
               <div className="flex justify-between items-start mb-6">
-                <div className={`text-6xl w-24 h-24 rounded-3xl flex items-center justify-center shadow-inner ${reward.color}`}>
-                  {reward.icon}
-                </div>
-                {isTarget && (
-                  <div className="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-1 shadow-sm">
-                    <Target size={16} /> Goal
-                  </div>
-                )}
+                <div className={`text-6xl w-24 h-24 rounded-3xl flex items-center justify-center shadow-inner ${reward.color}`}>{reward.icon}</div>
+                {isTarget && (<div className="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-1 shadow-sm"><Target size={16} /> Goal</div>)}
               </div>
               <h3 className="text-2xl font-extrabold text-slate-800 mb-2">{reward.title}</h3>
-              <div className="flex items-center gap-1 text-slate-600 font-bold mb-6">
-                Cost: <Star size={18} className="text-yellow-400 fill-yellow-400 ml-1" /> {reward.cost}
-              </div>
+              <div className="flex items-center gap-1 text-slate-600 font-bold mb-6">Cost: <Star size={18} className="text-yellow-400 fill-yellow-400 ml-1" /> {reward.cost}</div>
               <div className="mt-auto pt-4 flex gap-2">
                 {affordable ? (
-                  <button onClick={() => handleRedeem(reward)} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-2xl transition-colors shadow-md text-lg">
-                    Buy Reward
-                  </button>
+                  <button onClick={() => handleRedeem(reward)} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-2xl transition-colors shadow-md text-lg">Buy Reward</button>
                 ) : (
-                  <button onClick={() => handleSetTarget(reward)} disabled={isTarget} className={`flex-1 font-bold py-3 px-4 rounded-2xl transition-colors text-lg ${
-                    isTarget ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-                  }`}>
+                  <button onClick={() => handleSetTarget(reward)} disabled={isTarget} className={`flex-1 font-bold py-3 px-4 rounded-2xl transition-colors text-lg ${isTarget ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}>
                     {isTarget ? 'Target Set!' : 'Set as Goal'}
                   </button>
                 )}
@@ -640,6 +528,7 @@ const RewardsView = () => {
   );
 };
 
+// --- CALENDAR VIEW (VERTICAL/STACKED FOR TABLET) ---
 const CalendarView = () => {
   const { history, dailyStars, profiles } = useContext(FamilyContext);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -660,9 +549,10 @@ const CalendarView = () => {
   const selectedDayHistory = selectedDate ? history.filter(h => h.date === selectedDate) : [];
 
   return (
-    <div className="max-w-6xl mx-auto h-full flex gap-8 pb-8">
-      <div className="flex-1 flex flex-col">
-        <header className="mb-8">
+    <div className="max-w-4xl mx-auto h-full flex flex-col gap-8 pb-8">
+      {/* Top: Calendar Grid */}
+      <div className="w-full flex flex-col">
+        <header className="mb-6">
           <h1 className="text-4xl font-black text-slate-800">Overview Calendar 📅</h1>
           <p className="text-lg text-slate-500 font-bold mt-2">{today.toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
         </header>
@@ -670,7 +560,7 @@ const CalendarView = () => {
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
           <div className="grid grid-cols-7 gap-2 mb-4">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center font-bold text-slate-400 uppercase text-sm tracking-wider">{day}</div>
+              <div key={day} className="text-center font-bold text-slate-400 uppercase text-xs md:text-sm tracking-wider">{day}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-2">
@@ -684,18 +574,18 @@ const CalendarView = () => {
               return (
                 <motion.button
                   key={dayNumber} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setSelectedDate(dateStr)}
-                  className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-2 relative transition-all border-2 ${
+                  className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-1 md:p-2 relative transition-all border-2 ${
                     isSelected ? 'border-indigo-400 bg-indigo-50 shadow-md ring-4 ring-indigo-50 z-10' : 
                     isToday ? 'border-emerald-300 bg-emerald-50' : 'border-transparent hover:bg-slate-50 bg-white shadow-sm'
                   }`}
                 >
-                  <span className={`text-xl font-extrabold mb-1 ${isToday ? 'text-emerald-700' : 'text-slate-600'}`}>{dayNumber}</span>
+                  <span className={`text-lg md:text-xl font-extrabold mb-1 ${isToday ? 'text-emerald-700' : 'text-slate-600'}`}>{dayNumber}</span>
                   <div className="flex -space-x-2">
                     {starsOnDay.map((star, idx) => {
                       const kid = getKidProfile(star.kidId);
                       if (!kid) return null;
                       return (
-                        <div key={idx} className="w-6 h-6 rounded-full bg-white shadow-sm flex items-center justify-center text-xs border border-yellow-200">
+                        <div key={idx} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-white shadow-sm flex items-center justify-center text-[10px] md:text-xs border border-yellow-200">
                           {kid.avatar}
                         </div>
                       );
@@ -708,39 +598,42 @@ const CalendarView = () => {
         </div>
       </div>
 
-      <div className="w-80 flex flex-col">
+      {/* Bottom: Details Panel */}
+      <div className="w-full flex flex-col">
         <AnimatePresence mode="wait">
           {selectedDate ? (
-            <motion.div key="details" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex-1 sticky top-0">
+            <motion.div key="details" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="bg-white rounded-3xl p-6 shadow-sm border border-indigo-100 border-t-4 border-t-indigo-400 flex-1">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2">
                   <CalendarIcon className="text-indigo-400" />
-                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </h3>
-                <button onClick={() => setSelectedDate(null)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                <button onClick={() => setSelectedDate(null)} className="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200 transition-colors"><X size={20} /></button>
               </div>
               {selectedDayHistory.length === 0 ? (
                 <div className="text-center text-slate-400 py-10 flex flex-col items-center gap-3">
                   <Clock size={40} className="text-slate-200" />
-                  <p className="font-medium">No tasks recorded on this day.</p>
+                  <p className="font-medium text-lg">No tasks recorded on this day.</p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {profiles.filter(p => p.role === 'kid').map(kid => {
                     const kidHistory = selectedDayHistory.filter(h => h.kidId === kid.id);
                     if (kidHistory.length === 0) return null;
                     const earnedStar = dailyStars.some(s => s.date === selectedDate && s.kidId === kid.id && s.allCompleted);
                     return (
-                      <div key={kid.id} className="bg-slate-50 rounded-2xl p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="font-bold text-slate-700 flex items-center gap-2">{kid.avatar} {kid.name}</span>
-                          {earnedStar && <Star size={16} className="text-yellow-400 fill-yellow-400" />}
+                      <div key={kid.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
+                          <span className="font-black text-lg text-slate-700 flex items-center gap-2">{kid.avatar} {kid.name}</span>
+                          {earnedStar && <div className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1"><Star size={14} className="fill-yellow-500" /> Perfect Day</div>}
                         </div>
                         <ul className="flex flex-col gap-2">
                           {kidHistory.map(h => (
-                            <li key={h.id} className="text-sm font-medium text-slate-600 flex justify-between bg-white px-3 py-2 rounded-xl shadow-sm">
+                            <li key={h.id} className="text-sm font-bold text-slate-600 flex justify-between bg-white px-4 py-3 rounded-xl shadow-sm border border-slate-50">
                               <span className="truncate">{h.taskTitle}</span>
-                              <span className="text-emerald-500 font-bold ml-2">+{h.points}</span>
+                              <span className="text-emerald-500 ml-2">
+                                {h.points > 0 ? `+${h.points}` : h.points}
+                              </span>
                             </li>
                           ))}
                         </ul>
@@ -751,9 +644,9 @@ const CalendarView = () => {
               )}
             </motion.div>
           ) : (
-             <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-slate-100/50 rounded-3xl p-6 border-2 border-dashed border-slate-200 flex-1 flex flex-col items-center justify-center text-center text-slate-400">
+             <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-slate-100/50 rounded-3xl p-8 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center text-slate-400">
                <CalendarIcon size={48} className="mb-4 text-slate-300" />
-               <p className="font-bold text-lg">Tap a day to see<br/>task history!</p>
+               <p className="font-bold text-xl text-slate-500">Tap a day above to see task history!</p>
              </motion.div>
           )}
         </AnimatePresence>
@@ -762,6 +655,7 @@ const CalendarView = () => {
   );
 };
 
+// --- PARENTS VIEW ---
 const PinPad = ({ onUnlock }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
@@ -772,9 +666,8 @@ const PinPad = ({ onUnlock }) => {
       const newPin = pin + num;
       setPin(newPin);
       if (newPin.length === 6) {
-        if (newPin === CORRECT_PIN) {
-          onUnlock();
-        } else {
+        if (newPin === CORRECT_PIN) onUnlock();
+        else {
           setError(true);
           setTimeout(() => { setPin(''); setError(false); }, 500);
         }
@@ -782,53 +675,23 @@ const PinPad = ({ onUnlock }) => {
     }
   };
 
-  const handleBackspace = () => {
-    setPin(pin.slice(0, -1));
-  };
-
   return (
     <div className="h-full flex flex-col items-center justify-center">
-      <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-500 mb-6 shadow-inner">
-        <Lock size={40} />
-      </div>
+      <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-500 mb-6 shadow-inner"><Lock size={40} /></div>
       <h2 className="text-3xl font-black text-slate-800 mb-2">Parent Zone</h2>
       <p className="text-slate-500 font-bold mb-8">Enter PIN to unlock</p>
-
-      <motion.div 
-        animate={error ? { x: [-10, 10, -10, 10, 0] } : {}}
-        transition={{ duration: 0.4 }}
-        className="flex gap-4 mb-8"
-      >
+      <motion.div animate={error ? { x: [-10, 10, -10, 10, 0] } : {}} transition={{ duration: 0.4 }} className="flex gap-4 mb-8">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
-            pin.length > i ? 'bg-indigo-500 border-indigo-500 scale-110' : 
-            error ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-slate-100'
-          }`} />
+          <div key={i} className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${pin.length > i ? 'bg-indigo-500 border-indigo-500 scale-110' : error ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-slate-100'}`} />
         ))}
       </motion.div>
-
       <div className="grid grid-cols-3 gap-4 max-w-[280px]">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-          <button 
-            key={num} onClick={() => handlePress(num.toString())}
-            className="w-20 h-20 rounded-full bg-white border border-slate-200 shadow-sm text-2xl font-black text-slate-700 hover:bg-slate-50 hover:border-indigo-200 active:scale-95 transition-all"
-          >
-            {num}
-          </button>
+          <button key={num} onClick={() => handlePress(num.toString())} className="w-20 h-20 rounded-full bg-white border border-slate-200 shadow-sm text-2xl font-black text-slate-700 hover:bg-slate-50 hover:border-indigo-200 active:scale-95 transition-all">{num}</button>
         ))}
-        <div /> {/* Empty slot */}
-        <button 
-          onClick={() => handlePress('0')}
-          className="w-20 h-20 rounded-full bg-white border border-slate-200 shadow-sm text-2xl font-black text-slate-700 hover:bg-slate-50 hover:border-indigo-200 active:scale-95 transition-all"
-        >
-          0
-        </button>
-        <button 
-          onClick={handleBackspace}
-          className="w-20 h-20 rounded-full bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-700 active:scale-95 transition-all flex items-center justify-center"
-        >
-          <Delete size={28} />
-        </button>
+        <div /> 
+        <button onClick={() => handlePress('0')} className="w-20 h-20 rounded-full bg-white border border-slate-200 shadow-sm text-2xl font-black text-slate-700 hover:bg-slate-50 hover:border-indigo-200 active:scale-95 transition-all">0</button>
+        <button onClick={() => setPin(pin.slice(0, -1))} className="w-20 h-20 rounded-full bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200 hover:text-slate-700 active:scale-95 transition-all flex items-center justify-center"><Delete size={28} /></button>
       </div>
     </div>
   );
@@ -841,29 +704,34 @@ const ParentsView = () => {
   const pendingRedemptions = redemptions.filter(r => r.status === 'pending');
   const pendingTasks = tasks.filter(t => t.status === 'pending');
   
+  // Forms state
   const [newKidName, setNewKidName] = useState('');
   const [newKidEmoji, setNewKidEmoji] = useState('🐯');
+  const [editingKidId, setEditingKidId] = useState(null);
+  const [editKidName, setEditKidName] = useState('');
+  const [editKidEmoji, setEditKidEmoji] = useState('');
+  
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskPoints, setNewTaskPoints] = useState(10);
-  const [newTaskAssignee, setNewTaskAssignee] = useState('');
+  const [newTaskAssignees, setNewTaskAssignees] = useState([]); // Multiple assignees
   const [newTaskIcon, setNewTaskIcon] = useState('🧹');
   const [newTaskFrequency, setNewTaskFrequency] = useState('daily');
   const [newTaskRequiresApproval, setNewTaskRequiresApproval] = useState(false);
+  
   const [newRewardTitle, setNewRewardTitle] = useState('');
   const [newRewardCost, setNewRewardCost] = useState(100);
   const [newRewardIcon, setNewRewardIcon] = useState('🎁');
   const rewardColors = ['bg-blue-100', 'bg-pink-100', 'bg-yellow-100', 'bg-emerald-100', 'bg-purple-100'];
   const [newRewardColor, setNewRewardColor] = useState(rewardColors[0]);
+  
   const [adjustKidId, setAdjustKidId] = useState('');
   const [adjustAmount, setAdjustAmount] = useState(5);
 
   const kids = profiles.filter(p => p.role === 'kid');
 
-  // If the parent zone hasn't been unlocked via PIN, show the PinPad
-  if (!isUnlocked) {
-    return <PinPad onUnlock={() => setIsUnlocked(true)} />;
-  }
+  if (!isUnlocked) return <PinPad onUnlock={() => setIsUnlocked(true)} />;
 
+  // --- ACTIONS ---
   const handleApproveRedemption = async (redemptionId) => {
     if (!user) return;
     const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'redemptions', 'docs', redemptionId);
@@ -884,10 +752,8 @@ const ParentsView = () => {
     try {
       batch.update(taskRef, { completed: true, status: 'completed' });
       batch.update(profileRef, { points: kidProfile.points + task.points });
-      batch.set(historyRef, {
-        kidId: kidProfile.id, taskId: task.id, taskTitle: task.title, 
-        points: task.points, date: todayStr, timestamp: serverTimestamp()
-      });
+      batch.set(historyRef, { kidId: kidProfile.id, taskId: task.id, taskTitle: task.title, points: task.points, date: todayStr, timestamp: serverTimestamp() });
+      
       const kidActiveTasks = tasks.filter(t => t.assigneeId === task.assigneeId && (t.status ? t.status !== 'completed' : !t.completed));
       const remainingTasks = kidActiveTasks.filter(t => t.id !== task.id);
       if (remainingTasks.length === 0) {
@@ -909,20 +775,48 @@ const ParentsView = () => {
     if (!user || !newKidName) return;
     const newId = `kid-${Date.now()}`;
     const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'profiles', 'docs', newId);
-    await setDoc(ref, { id: newId, name: newKidName, avatar: newKidEmoji, color: 'bg-orange-100 text-orange-700', points: 0, targetRewardId: null, role: 'kid' });
+    await setDoc(ref, { id: newId, name: newKidName, avatar: newKidEmoji, color: 'bg-emerald-100 text-emerald-700', points: 0, targetRewardId: null, role: 'kid' });
     setNewKidName('');
+  };
+
+  const handleSaveEditKid = async (kidId) => {
+    if (!user || !editKidName) return;
+    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'profiles', 'docs', kidId);
+    await updateDoc(ref, { name: editKidName, avatar: editKidEmoji });
+    setEditingKidId(null);
+  };
+
+  const handleDeleteKid = async (kidId) => {
+    if (!user) return;
+    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'profiles', 'docs', kidId);
+    await deleteDoc(ref);
+  };
+
+  const toggleAssignee = (kidId) => {
+    setNewTaskAssignees(prev => prev.includes(kidId) ? prev.filter(id => id !== kidId) : [...prev, kidId]);
   };
 
   const handleAddTask = async (e) => {
     e.preventDefault();
-    if (!user || !newTaskTitle || !newTaskAssignee) return;
-    const newId = `task-${Date.now()}`;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'tasks', 'docs', newId);
-    await setDoc(ref, {
-      id: newId, title: newTaskTitle, points: Number(newTaskPoints), assigneeId: newTaskAssignee,
-      completed: false, status: 'active', requiresApproval: newTaskRequiresApproval, icon: newTaskIcon, frequency: newTaskFrequency
+    if (!user || !newTaskTitle || newTaskAssignees.length === 0) {
+      alert("Please select at least one child!");
+      return;
+    }
+    const baseRef = collection(db, 'artifacts', appId, 'users', user.uid, 'family_data');
+    const batch = writeBatch(db);
+
+    // Create a unique task for EACH selected child
+    newTaskAssignees.forEach(assigneeId => {
+      const uniqueId = `task-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const ref = doc(collection(baseRef, 'tasks', 'docs'), uniqueId);
+      batch.set(ref, {
+        id: uniqueId, title: newTaskTitle, points: Number(newTaskPoints), assigneeId: assigneeId,
+        completed: false, status: 'active', requiresApproval: newTaskRequiresApproval, icon: newTaskIcon, frequency: newTaskFrequency
+      });
     });
-    setNewTaskTitle(''); setNewTaskRequiresApproval(false);
+
+    await batch.commit();
+    setNewTaskTitle(''); setNewTaskRequiresApproval(false); setNewTaskAssignees([]);
   };
 
   const handleAddReward = async (e) => {
@@ -940,20 +834,15 @@ const ParentsView = () => {
     await deleteDoc(ref);
   };
 
-  const handleDeleteKid = async (kidId) => {
-    if (!user) return;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'family_data', 'profiles', 'docs', kidId);
-    await deleteDoc(ref);
-  };
-
-  const handleAdjustStars = async (e) => {
+  const handleAdjustStars = async (e, type) => {
     e.preventDefault();
-    if (!user || !adjustKidId) return;
+    if (!user || !adjustKidId || !adjustAmount) return;
     const kidProfile = profiles.find(p => p.id === adjustKidId);
     if (!kidProfile) return;
-    const amount = Number(adjustAmount);
-    if (amount === 0) return;
     
+    let amount = Number(adjustAmount);
+    if (type === 'subtract') amount = -amount;
+
     const baseRef = collection(db, 'artifacts', appId, 'users', user.uid, 'family_data');
     const profileRef = doc(baseRef, 'profiles', 'docs', kidProfile.id);
     const historyRef = doc(baseRef, 'history', 'docs');
@@ -968,58 +857,97 @@ const ParentsView = () => {
 
     try {
       await batch.commit();
-      setAdjustKidId(''); setAdjustAmount(5);
+      setAdjustAmount(5);
     } catch (error) { console.error("Error adjusting stars:", error); }
   };
 
   return (
-    <div className="max-w-6xl mx-auto h-full pb-8 flex gap-8">
+    <div className="max-w-6xl mx-auto h-full pb-8 flex flex-col xl:flex-row gap-8">
+      
+      {/* LEFT COLUMN */}
       <div className="flex-1 flex flex-col gap-6">
         <header className="mb-2 flex justify-between items-end">
           <div>
-            <h1 className="text-4xl font-black text-slate-800 flex items-center gap-3">
-              <Settings className="text-slate-400" size={36} /> Parent Zone
-            </h1>
+            <h1 className="text-4xl font-black text-slate-800 flex items-center gap-3"><Settings className="text-slate-400" size={36} /> Parent Zone</h1>
             <p className="text-lg text-slate-500 font-bold mt-2">Manage your crew, quests, and rewards.</p>
           </div>
-          <button 
-            onClick={() => setIsUnlocked(false)} 
-            className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold px-4 py-2 rounded-xl transition-colors"
-          >
+          <button onClick={() => setIsUnlocked(false)} className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-600 font-bold px-4 py-2 rounded-xl transition-colors">
             <Lock size={16} /> Lock
           </button>
         </header>
 
+        {/* 1. Add Task Form (Updated for Multi-Select) */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
           <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Plus className="text-indigo-500 bg-indigo-100 rounded-full p-1" size={24} /> Create New Quest</h2>
           <form onSubmit={handleAddTask} className="flex flex-col gap-4">
-            <div className="flex gap-4">
-              <input type="text" value={newTaskIcon} onChange={e => setNewTaskIcon(e.target.value)} className="w-16 text-center text-2xl bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-400" maxLength={2} />
-              <input type="text" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} placeholder="Quest Title (e.g., Wash dishes)" className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400" required />
+            
+            {/* Kids Multi-Select */}
+            <div>
+              <p className="text-sm font-bold text-slate-400 mb-2">Assign to (Tap all that apply):</p>
+              <div className="flex flex-wrap gap-2">
+                {kids.map(k => {
+                  const isSelected = newTaskAssignees.includes(k.id);
+                  return (
+                    <button key={k.id} type="button" onClick={() => toggleAssignee(k.id)} className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${isSelected ? 'bg-indigo-500 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                      <span>{k.avatar}</span> {k.name}
+                      {isSelected && <Check size={16} />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex gap-4">
-               <select value={newTaskAssignee} onChange={e => setNewTaskAssignee(e.target.value)} className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400" required>
-                 <option value="" disabled>Select child...</option>
-                 {kids.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
-               </select>
+
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex flex-1 gap-2">
+                <input type="text" value={newTaskIcon} onChange={e => setNewTaskIcon(e.target.value)} className="w-16 text-center text-2xl bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-400" maxLength={2} title="Emoji" />
+                <input type="text" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} placeholder="Quest Title (e.g., Wash dishes)" className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400" required />
+              </div>
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-4">
                <select value={newTaskFrequency} onChange={e => setNewTaskFrequency(e.target.value)} className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400">
                  <option value="once">One-Time</option> <option value="daily">Daily</option> <option value="weekly">Weekly</option> <option value="monthly">Monthly</option>
                </select>
                <div className="relative flex-1">
                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Star size={16} className="text-yellow-500 fill-yellow-500" /></div>
-                 <input type="number" value={newTaskPoints} onChange={e => setNewTaskPoints(e.target.value)} min="1" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400" required />
+                 <input type="number" value={newTaskPoints} onChange={e => setNewTaskPoints(e.target.value)} min="1" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400" required placeholder="Star Reward" />
                </div>
             </div>
-            <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 mt-2">
+
+            <div className="flex flex-col md:flex-row items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 mt-2 gap-4">
               <label className="flex items-center gap-3 cursor-pointer text-slate-700 font-bold select-none">
                 <input type="checkbox" checked={newTaskRequiresApproval} onChange={(e) => setNewTaskRequiresApproval(e.target.checked)} className="w-5 h-5 rounded text-indigo-500 focus:ring-indigo-400 border-slate-300" />
                 Require Parent Approval
               </label>
-              <button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-6 py-2 rounded-xl transition-colors shadow-sm whitespace-nowrap">Add Quest</button>
+              <button type="submit" className="w-full md:w-auto bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-8 py-3 rounded-xl transition-colors shadow-sm">Assign Quest</button>
             </div>
           </form>
         </div>
 
+        {/* 2. Adjust Stars Form (Updated) */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+          <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Star className="text-yellow-500 bg-yellow-100 rounded-full p-1" size={24} /> Adjust Star Balance</h2>
+          <form className="flex flex-col md:flex-row gap-4">
+            <select value={adjustKidId} onChange={e => setAdjustKidId(e.target.value)} className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-400">
+              <option value="" disabled>Select child...</option>
+              {kids.map(k => <option key={k.id} value={k.id}>{k.name} (Current: {k.points} ⭐)</option>)}
+            </select>
+            
+            <div className="flex flex-1 gap-2">
+              <input type="number" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} min="1" className="w-24 text-center px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-400" required placeholder="Amount" />
+              <div className="flex flex-1 gap-2">
+                <button type="button" onClick={(e) => handleAdjustStars(e, 'add')} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-2 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1">
+                  <Plus size={18} /> Add
+                </button>
+                <button type="button" onClick={(e) => handleAdjustStars(e, 'subtract')} className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold px-2 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1">
+                  <Minus size={18} /> Remove
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* 3. Add Reward Form */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
           <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Gift className="text-pink-500 bg-pink-100 rounded-full p-1" size={24} /> Create New Reward</h2>
           <form onSubmit={handleAddReward} className="flex flex-col gap-4">
@@ -1031,66 +959,24 @@ const ParentsView = () => {
                  <input type="number" value={newRewardCost} onChange={e => setNewRewardCost(e.target.value)} min="1" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pink-400" required />
               </div>
             </div>
-            <div className="flex gap-4 items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
               <div className="flex gap-2 items-center">
                 <span className="text-sm font-bold text-slate-400 mr-2">Color:</span>
                 {rewardColors.map(color => (
                   <button key={color} type="button" onClick={() => setNewRewardColor(color)} className={`w-8 h-8 rounded-full ${color} border-2 transition-all ${newRewardColor === color ? 'border-slate-800 scale-110 shadow-sm' : 'border-transparent hover:scale-105'}`} />
                 ))}
               </div>
-              <button type="submit" className="bg-pink-500 hover:bg-pink-600 text-white font-bold px-8 py-3 rounded-xl transition-colors shadow-sm">Add to Store</button>
+              <button type="submit" className="w-full md:w-auto bg-pink-500 hover:bg-pink-600 text-white font-bold px-8 py-3 rounded-xl transition-colors shadow-sm">Add to Store</button>
             </div>
           </form>
-        </div>
-
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-          <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Star className="text-yellow-500 bg-yellow-100 rounded-full p-1" size={24} /> Adjust Star Balance</h2>
-          <form onSubmit={handleAdjustStars} className="flex gap-4">
-            <select value={adjustKidId} onChange={e => setAdjustKidId(e.target.value)} className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-400" required>
-              <option value="" disabled>Select child...</option>
-              {kids.map(k => <option key={k.id} value={k.id}>{k.name} ({k.points} ⭐)</option>)}
-            </select>
-            <div className="relative w-32">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><span className="text-slate-400 font-bold text-lg">±</span></div>
-              <input type="number" value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-400" required />
-            </div>
-            <button type="submit" className="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold px-6 rounded-xl transition-colors shadow-sm whitespace-nowrap">Update</button>
-          </form>
-        </div>
-
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-          <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><User className="text-emerald-500 bg-emerald-100 rounded-full p-1" size={24} /> Add Adventurer</h2>
-          <form onSubmit={handleAddKid} className="flex gap-4">
-             <input type="text" value={newKidEmoji} onChange={e => setNewKidEmoji(e.target.value)} className="w-16 text-center text-2xl bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-400" maxLength={2} />
-             <input type="text" value={newKidName} onChange={e => setNewKidName(e.target.value)} placeholder="Child's Name" className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-400" required />
-             <button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-6 rounded-xl transition-colors shadow-sm whitespace-nowrap">Add Child</button>
-          </form>
-
-          <div className="mt-6 flex flex-col gap-3">
-            {kids.map(kid => (
-              <div key={kid.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100 group">
-                <div className="flex items-center gap-3">
-                  <div className={`text-3xl w-12 h-12 rounded-xl flex items-center justify-center shadow-inner ${kid.color}`}>
-                    {kid.avatar}
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-700">{kid.name}</p>
-                    <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                      <Star size={10} className="fill-yellow-400 text-yellow-400" /> {kid.points} Stars
-                    </p>
-                  </div>
-                </div>
-                <button onClick={() => handleDeleteKid(kid.id)} className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors opacity-0 group-hover:opacity-100" title="Remove Child">
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
-      <div className="w-96 flex flex-col gap-6">
-         <div className="bg-gradient-to-b from-indigo-50 to-white rounded-3xl p-6 shadow-sm border border-indigo-100 shrink-0">
+      {/* RIGHT COLUMN (Notifications & Management) */}
+      <div className="w-full xl:w-96 flex flex-col gap-6">
+         
+         {/* Action Required Feed */}
+         <div className="bg-gradient-to-b from-indigo-50 to-white rounded-3xl p-6 shadow-sm border border-indigo-100 shrink-0 max-h-[600px] flex flex-col">
             <h2 className="text-xl font-black text-indigo-900 mb-6 flex items-center gap-2">
               <CheckCircle className="text-indigo-500" /> Action Required
               {(pendingRedemptions.length + pendingTasks.length) > 0 && (
@@ -1103,7 +989,7 @@ const ParentsView = () => {
                 <p className="font-bold text-sm">All caught up!</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-4 max-h-80 overflow-y-auto pr-2 hide-scrollbar">
+              <div className="flex flex-col gap-4 overflow-y-auto pr-2 hide-scrollbar flex-1">
                 <AnimatePresence>
                   {pendingTasks.map(task => {
                     const kid = profiles.find(p => p.id === task.assigneeId);
@@ -1140,14 +1026,52 @@ const ParentsView = () => {
             )}
          </div>
 
-         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex-1 flex flex-col">
+         {/* Manage Adventurers (Add/Edit/Delete) */}
+         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 shrink-0">
+            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><User className="text-emerald-500" size={24} /> Manage Adventurers</h2>
+            
+            <form onSubmit={handleAddKid} className="flex gap-2 mb-4 border-b border-slate-100 pb-4">
+               <input type="text" value={newKidEmoji} onChange={e => setNewKidEmoji(e.target.value)} className="w-12 text-center text-xl bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-400" maxLength={2} />
+               <input type="text" value={newKidName} onChange={e => setNewKidName(e.target.value)} placeholder="Add New..." className="flex-1 px-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-400 text-sm" required />
+               <button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 rounded-xl transition-colors shadow-sm"><Plus size={18} /></button>
+            </form>
+
+            <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-2 hide-scrollbar">
+              {kids.map(kid => (
+                <div key={kid.id} className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  {editingKidId === kid.id ? (
+                    <div className="flex gap-2">
+                      <input type="text" value={editKidEmoji} onChange={e => setEditKidEmoji(e.target.value)} className="w-10 text-center bg-white border border-slate-300 rounded-lg outline-none focus:border-emerald-400" maxLength={2} />
+                      <input type="text" value={editKidName} onChange={e => setEditKidName(e.target.value)} className="flex-1 px-2 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-emerald-400" />
+                      <button onClick={() => handleSaveEditKid(kid.id)} className="bg-emerald-500 text-white p-2 rounded-lg hover:bg-emerald-600"><Check size={16} /></button>
+                      <button onClick={() => setEditingKidId(null)} className="bg-slate-300 text-slate-700 p-2 rounded-lg hover:bg-slate-400"><X size={16} /></button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between group">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl bg-white w-8 h-8 rounded-lg flex items-center justify-center shadow-sm">{kid.avatar}</span>
+                        <span className="font-bold text-slate-700">{kid.name}</span>
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => { setEditingKidId(kid.id); setEditKidName(kid.name); setEditKidEmoji(kid.avatar); }} className="text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 p-1.5 rounded-lg"><Edit2 size={16} /></button>
+                        <button onClick={() => handleDeleteKid(kid.id)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+         </div>
+
+         {/* Store Management */}
+         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex-1 flex flex-col max-h-[300px]">
             <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><StoreIcon className="text-slate-400" size={24} /> Active Store Items</h2>
             <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-2 hide-scrollbar">
               {rewards.length === 0 ? (
                 <p className="text-slate-400 font-medium text-center py-4">No rewards in store.</p>
               ) : (
                 rewards.map(reward => (
-                  <div key={reward.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100 group">
+                  <div key={reward.id} className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100 group shrink-0">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${reward.color}`}>{reward.icon}</div>
                       <div>
@@ -1161,22 +1085,29 @@ const ParentsView = () => {
               )}
             </div>
          </div>
+
       </div>
     </div>
   );
 };
 
+// ============================================================================
+// MAIN EXPORT
+// ============================================================================
 export default function App() {
   const [user, setUser] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [currentView, setCurrentView] = useState('home');
   const [showCelebration, setShowCelebration] = useState(false);
 
-  // Initialize Auth
   useEffect(() => {
     const initAuth = async () => {
       try {
-        await signInAnonymously(auth);
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
       } catch (err) {
         console.error("Auth init failed:", err);
       }
@@ -1205,7 +1136,7 @@ export default function App() {
     <FamilyContext.Provider value={familyData}>
       <div className="min-h-screen bg-slate-50 font-sans flex text-slate-800 overflow-hidden selection:bg-indigo-100">
         <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
-        <main className="flex-1 h-screen overflow-y-auto px-8 py-8 relative">
+        <main className="flex-1 h-screen overflow-y-auto px-4 md:px-8 py-8 relative">
           
           {currentView !== 'parents' && currentView !== 'calendar' && currentView !== 'home' && (
             <div className="mb-10 max-w-5xl mx-auto flex items-center justify-between">
