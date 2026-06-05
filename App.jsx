@@ -740,9 +740,11 @@ const ParentsView = () => {
   const [editTaskTitle, setEditTaskTitle] = useState('');
   const [editTaskIcon, setEditTaskIcon] = useState('');
   const [editTaskPoints, setEditTaskPoints] = useState(10);  
+  const [editTaskFrequency, setEditTaskFrequency] = useState('once');
+
 
   const kids = profiles.filter(p => p.role === 'kid');
-
+  
   if (!isUnlocked) return <PinPad onUnlock={() => setIsUnlocked(true)} />;
 
   // --- ACTIONS ---
@@ -818,7 +820,8 @@ const ParentsView = () => {
     await updateDoc(ref, { 
       title: editTaskTitle, 
       icon: editTaskIcon, 
-      points: Number(editTaskPoints) 
+      points: Number(editTaskPoints),
+      frequency: editTaskFrequency
     });
     setEditingTaskId(null);
   };
@@ -1127,9 +1130,17 @@ const ParentsView = () => {
                             <input type="text" value={editTaskIcon} onChange={e => setEditTaskIcon(e.target.value)} className="w-10 text-center bg-white border border-slate-300 rounded-lg outline-none focus:border-indigo-400" maxLength={2} />
                             <input type="text" value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} className="flex-1 px-2 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400" />
                           </div>
-                          <div className="flex gap-2 items-center">
+                          <div className="flex gap-2 items-center flex-wrap">
                             <input type="number" value={editTaskPoints} onChange={e => setEditTaskPoints(e.target.value)} className="w-16 px-2 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400" />
-                            <span className="text-xs font-bold text-slate-400">Stars</span>
+                            <span className="text-xs font-bold text-slate-400 mr-2">Stars</span>
+                            
+                            <select value={editTaskFrequency} onChange={e => setEditTaskFrequency(e.target.value)} className="px-2 py-1 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400 text-slate-600">
+                              <option value="once">One-Time</option>
+                              <option value="daily">Daily</option>
+                              <option value="weekly">Weekly</option>
+                              <option value="monthly">Monthly</option>
+                            </select>
+
                             <div className="ml-auto flex gap-2">
                               <button onClick={() => handleSaveEditTask(task.id)} className="bg-indigo-500 text-white p-2 rounded-lg hover:bg-indigo-600"><Check size={16} /></button>
                               <button onClick={() => setEditingTaskId(null)} className="bg-slate-300 text-slate-700 p-2 rounded-lg hover:bg-slate-400"><X size={16} /></button>
@@ -1143,12 +1154,18 @@ const ParentsView = () => {
                             <div>
                               <p className="font-bold text-slate-700 text-sm truncate max-w-[150px]">{task.title}</p>
                               <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                                <Star size={10} className="fill-yellow-400 text-yellow-400" /> {task.points} • {assignee?.name || 'Missing'}
+                                <Star size={10} className="fill-yellow-400 text-yellow-400" /> {task.points} • {task.frequency || 'once'} • {assignee?.name || 'Missing'}
                               </p>
                             </div>
                           </div>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setEditingTaskId(task.id); setEditTaskTitle(task.title); setEditTaskIcon(task.icon); setEditTaskPoints(task.points); }} className="text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 p-1.5 rounded-lg"><Edit2 size={16} /></button>
+                            <button onClick={() => { 
+                              setEditingTaskId(task.id); 
+                              setEditTaskTitle(task.title); 
+                              setEditTaskIcon(task.icon); 
+                              setEditTaskPoints(task.points); 
+                              setEditTaskFrequency(task.frequency || 'once'); 
+                            }} className="text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 p-1.5 rounded-lg"><Edit2 size={16} /></button>
                             <button onClick={() => handleDeleteTask(task.id)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={16} /></button>
                           </div>
                         </div>
@@ -1159,7 +1176,6 @@ const ParentsView = () => {
               )}
             </div>
          </div>
-
 
         
          {/* Store Management */}
