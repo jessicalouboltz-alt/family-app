@@ -980,11 +980,7 @@ const ParentsView = () => {
           <form onSubmit={handleAddTask} className="flex flex-col gap-4">
             
             {/* Kids Multi-Select */}
-            <div>
-              <p className="text-sm font-bold text-slate-400 mb-2">Assign to (Tap all that apply):</p>
-              
-              
-              <div>
+           <div>
               <p className="text-sm font-bold text-slate-400 mb-2">Assign to (Tap all that apply):</p>
               <div className="flex flex-wrap gap-2 items-center">
                 <button type="button" onClick={() => toggleAssignee('unassigned')} className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${newTaskAssignees.includes('unassigned') ? 'bg-indigo-500 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
