@@ -339,16 +339,20 @@ const DashboardView = ({ triggerCelebration }) => {
   const { profiles, tasks, activeKidId, user } = useContext(FamilyContext);
   const activeProfile = profiles.find(p => p.id === activeKidId);
   const activeTasks = tasks.filter(t => t.assigneeId === activeKidId && (t.status ? t.status !== 'completed' : !t.completed));
+  const upForGrabsTasks = tasks.filter(t => t.assigneeId === 'unassigned' && (t.status ? t.status !== 'completed' : !t.completed));
   const { rewards } = useContext(FamilyContext);
 
-  const handleCompleteTask = async (task) => {
+const handleCompleteTask = async (task) => {
     if (!user || !activeProfile || task.status === 'pending') return;
     
     const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
     const taskRef = doc(collection(baseRef, 'tasks', 'docs'), task.id);
     
     if (task.requiresApproval) {
-      try { await updateDoc(taskRef, { status: 'pending' }); } 
+      try { 
+        // Lock the task to the kid requesting approval
+        await updateDoc(taskRef, { status: 'pending', assigneeId: activeKidId }); 
+      } 
       catch (error) { console.error("Error submitting task for approval:", error); }
       return;
     }
@@ -359,12 +363,13 @@ const DashboardView = ({ triggerCelebration }) => {
     const batch = writeBatch(db);
 
     try {
-      batch.update(taskRef, { completed: true, status: 'completed' });
+      // Lock the task to the kid completing it
+      batch.update(taskRef, { completed: true, status: 'completed', assigneeId: activeKidId });
       batch.update(profileRef, { points: activeProfile.points + task.points });
       batch.set(historyRef, { kidId: activeKidId, taskId: task.id, taskTitle: task.title, points: task.points, date: todayStr, timestamp: serverTimestamp() });
 
       const remainingTasks = activeTasks.filter(t => t.id !== task.id);
-      if (remainingTasks.length === 0) {
+      if (remainingTasks.length === 0 && activeTasks.length > 0) {
         const starRef = doc(collection(baseRef, 'daily_stars', 'docs'), `${todayStr}_${activeKidId}`);
         batch.set(starRef, { date: todayStr, kidId: activeKidId, allCompleted: true });
       }
@@ -452,6 +457,41 @@ const DashboardView = ({ triggerCelebration }) => {
             </AnimatePresence>
           </motion.div>
         )}
+        {upForGrabsTasks.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-2xl font-extrabold text-slate-800 mb-6 flex items-center gap-2">
+              <Sparkles className="text-yellow-400" /> Up for Grabs
+            </h2>
+            <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <AnimatePresence>
+                {upForGrabsTasks.map(task => (
+                  <motion.div key={task.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} whileHover={{ scale: 1.02, y: -4 }} whileTap={{ scale: 0.98 }} onClick={() => handleCompleteTask(task)}
+                    className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-3xl p-6 shadow-sm border border-yellow-200 cursor-pointer flex flex-col justify-between aspect-square group transition-all"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="text-5xl w-20 h-20 bg-white rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:rotate-12 shadow-sm relative">
+                        {task.icon}
+                      </div>
+                      <div className="font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm bg-yellow-400 text-yellow-900">
+                        <Star size={16} className="fill-yellow-100 text-yellow-100" /> +{task.points}
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <h3 className="text-xl font-extrabold leading-tight text-yellow-900 group-hover:text-orange-600 transition-colors">{task.title}</h3>
+                      <div className="flex items-center gap-2 mt-3 font-bold text-yellow-700">
+                        <div className="w-8 h-8 rounded-full border-2 border-yellow-300 bg-white flex items-center justify-center transition-all group-hover:bg-orange-500 group-hover:border-orange-500 group-hover:text-white">
+                          <Check size={16} strokeWidth={3} />
+                        </div>
+                        <span className="group-hover:text-orange-600 transition-colors">Tap to Claim</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </div>
+        )}
+        
       </section>
     </div>
   );
@@ -828,7 +868,16 @@ const ParentsView = () => {
 
   
   const toggleAssignee = (kidId) => {
-    setNewTaskAssignees(prev => prev.includes(kidId) ? prev.filter(id => id !== kidId) : [...prev, kidId]);
+    if (kidId === 'unassigned') {
+      // If "Up for Grabs" is clicked, clear all kids and set it to unassigned
+      setNewTaskAssignees(['unassigned']);
+    } else {
+      // If a kid is clicked, clear "unassigned" and toggle the kid
+      setNewTaskAssignees(prev => {
+        const filtered = prev.filter(id => id !== 'unassigned');
+        return filtered.includes(kidId) ? filtered.filter(id => id !== kidId) : [...filtered, kidId];
+      });
+    }
   };
 
   const handleAddTask = async (e) => {
@@ -933,7 +982,16 @@ const ParentsView = () => {
             {/* Kids Multi-Select */}
             <div>
               <p className="text-sm font-bold text-slate-400 mb-2">Assign to (Tap all that apply):</p>
-              <div className="flex flex-wrap gap-2">
+              
+              
+              <div>
+              <p className="text-sm font-bold text-slate-400 mb-2">Assign to (Tap all that apply):</p>
+              <div className="flex flex-wrap gap-2 items-center">
+                <button type="button" onClick={() => toggleAssignee('unassigned')} className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all ${newTaskAssignees.includes('unassigned') ? 'bg-indigo-500 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                  <Sparkles size={16} /> Up for Grabs
+                  {newTaskAssignees.includes('unassigned') && <Check size={16} />}
+                </button>
+                <div className="w-px h-6 bg-slate-200 mx-1" /> {/* Visual Divider */}
                 {kids.map(k => {
                   const isSelected = newTaskAssignees.includes(k.id);
                   return (
@@ -945,7 +1003,6 @@ const ParentsView = () => {
                 })}
               </div>
             </div>
-
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex flex-1 gap-2">
                 <input type="text" value={newTaskIcon} onChange={e => setNewTaskIcon(e.target.value)} className="w-16 text-center text-2xl bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-400" maxLength={2} title="Emoji" />
@@ -1154,7 +1211,7 @@ const ParentsView = () => {
                             <div>
                               <p className="font-bold text-slate-700 text-sm truncate max-w-[150px]">{task.title}</p>
                               <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                                <Star size={10} className="fill-yellow-400 text-yellow-400" /> {task.points} • {task.frequency || 'once'} • {assignee?.name || 'Missing'}
+                                <Star size={10} className="fill-yellow-400 text-yellow-400" /> {task.points} • {task.frequency || 'once'} • {task.assigneeId === 'unassigned' ? 'Up for Grabs' : (assignee?.name || 'Missing')}
                               </p>
                             </div>
                           </div>
