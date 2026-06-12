@@ -1063,18 +1063,22 @@ const ParentsView = () => {
           </form>
         </div>
 
-        {/* 3. Add Reward Form */}
+{/* 3. Add Reward Form */}
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
           <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Gift className="text-pink-500 bg-pink-100 rounded-full p-1" size={24} /> Create New Reward</h2>
           <form onSubmit={handleAddReward} className="flex flex-col gap-4">
-            <div className="flex gap-4">
-              <input type="text" value={newRewardIcon} onChange={e => setNewRewardIcon(e.target.value)} className="w-16 text-center text-2xl bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-400" maxLength={2} />
-              <input type="text" value={newRewardTitle} onChange={e => setNewRewardTitle(e.target.value)} placeholder="Reward Title (e.g., Movie Night)" className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pink-400" required />
-              <div className="relative w-32">
+            
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex flex-1 gap-2">
+                <input type="text" value={newRewardIcon} onChange={e => setNewRewardIcon(e.target.value)} className="w-16 text-center text-2xl bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-400" maxLength={2} />
+                <input type="text" value={newRewardTitle} onChange={e => setNewRewardTitle(e.target.value)} placeholder="Reward Title (e.g., Movie Night)" className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pink-400" required />
+              </div>
+              <div className="relative w-full md:w-32">
                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Star size={16} className="text-yellow-500 fill-yellow-500" /></div>
-                 <input type="number" value={newRewardCost} onChange={e => setNewRewardCost(e.target.value)} min="1" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pink-400" required />
+                 <input type="number" value={newRewardCost} onChange={e => setNewRewardCost(e.target.value)} min="1" placeholder="Cost" className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-pink-400" required />
               </div>
             </div>
+
             <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
               <div className="flex gap-2 items-center">
                 <span className="text-sm font-bold text-slate-400 mr-2">Color:</span>
@@ -1086,7 +1090,6 @@ const ParentsView = () => {
             </div>
           </form>
         </div>
-      </div>
 
       {/* RIGHT COLUMN (Notifications & Management) */}
       <div className="w-full xl:w-96 flex flex-col gap-6">
