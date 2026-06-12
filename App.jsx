@@ -784,6 +784,8 @@ const ParentsView = () => {
   const [editTaskIcon, setEditTaskIcon] = useState('');
   const [editTaskPoints, setEditTaskPoints] = useState(10);  
   const [editTaskFrequency, setEditTaskFrequency] = useState('once');
+  const [expandedGroups, setExpandedGroups] = useState({ unassigned: true });
+  
 
 
   const kids = profiles.filter(p => p.role === 'kid');
@@ -1184,61 +1186,87 @@ const ParentsView = () => {
          </div>
 
 
-{/* Manage Active Quests */}
-         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex-1 flex flex-col max-h-[300px] mb-6">
+{/* Manage Quests */}
+         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex-1 flex flex-col max-h-[500px] mb-6">
             <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Sparkles className="text-indigo-400" size={24} /> Manage Quests</h2>
             <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-2 hide-scrollbar">
               {tasks.length === 0 ? (
                 <p className="text-slate-400 font-medium text-center py-4">No active quests.</p>
               ) : (
-                tasks.map(task => {
-                  const assignee = kids.find(k => k.id === task.assigneeId);
+                [
+                  { id: 'unassigned', name: 'Up for Grabs', icon: '✨', tasks: tasks.filter(t => t.assigneeId === 'unassigned') },
+                  ...kids.map(kid => ({ id: kid.id, name: kid.name, icon: kid.avatar, tasks: tasks.filter(t => t.assigneeId === kid.id) }))
+                ]
+                .filter(group => group.tasks.length > 0 || group.id !== 'unassigned') // Hide Up for Grabs if it is empty!
+                .map(group => {
+                  const isExpanded = expandedGroups[group.id];
                   return (
-                    <div key={task.id} className="flex flex-col gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100 group shrink-0">
-                      {editingTaskId === task.id ? (
-                        <div className="flex flex-col gap-2">
-                          <div className="flex gap-2">
-                            <input type="text" value={editTaskIcon} onChange={e => setEditTaskIcon(e.target.value)} className="w-10 text-center bg-white border border-slate-300 rounded-lg outline-none focus:border-indigo-400" maxLength={2} />
-                            <input type="text" value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} className="flex-1 px-2 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400" />
-                          </div>
-                          <div className="flex gap-2 items-center flex-wrap">
-                            <input type="number" value={editTaskPoints} onChange={e => setEditTaskPoints(e.target.value)} className="w-16 px-2 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400" />
-                            <span className="text-xs font-bold text-slate-400 mr-2">Stars</span>
-                            
-                            <select value={editTaskFrequency} onChange={e => setEditTaskFrequency(e.target.value)} className="px-2 py-1 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400 text-slate-600">
-                              <option value="once">One-Time</option>
-                              <option value="daily">Daily</option>
-                              <option value="weekly">Weekly</option>
-                              <option value="monthly">Monthly</option>
-                            </select>
-
-                            <div className="ml-auto flex gap-2">
-                              <button onClick={() => handleSaveEditTask(task.id)} className="bg-indigo-500 text-white p-2 rounded-lg hover:bg-indigo-600"><Check size={16} /></button>
-                              <button onClick={() => setEditingTaskId(null)} className="bg-slate-300 text-slate-700 p-2 rounded-lg hover:bg-slate-400"><X size={16} /></button>
-                            </div>
-                          </div>
+                    <div key={group.id} className="border border-slate-200 rounded-2xl overflow-hidden shrink-0 transition-all">
+                      <button onClick={() => setExpandedGroups(prev => ({ ...prev, [group.id]: !prev[group.id] }))} className="w-full bg-slate-50 p-3 flex items-center justify-between hover:bg-slate-100 transition-colors">
+                        <div className="flex items-center gap-3 font-bold text-slate-700">
+                          <span className="text-xl bg-white w-8 h-8 rounded-lg flex items-center justify-center shadow-sm border border-slate-100">{group.icon}</span>
+                          <span>{group.name}</span>
+                          <span className="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full">{group.tasks.length}</span>
                         </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm">{task.icon}</div>
-                            <div>
-                              <p className="font-bold text-slate-700 text-sm truncate max-w-[150px]">{task.title}</p>
-                              <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                                <Star size={10} className="fill-yellow-400 text-yellow-400" /> {task.points} • {task.frequency || 'once'} • {task.assigneeId === 'unassigned' ? 'Up for Grabs' : (assignee?.name || 'Missing')}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { 
-                              setEditingTaskId(task.id); 
-                              setEditTaskTitle(task.title); 
-                              setEditTaskIcon(task.icon); 
-                              setEditTaskPoints(task.points); 
-                              setEditTaskFrequency(task.frequency || 'once'); 
-                            }} className="text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 p-1.5 rounded-lg"><Edit2 size={16} /></button>
-                            <button onClick={() => handleDeleteTask(task.id)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={16} /></button>
-                          </div>
+                        <ChevronRight size={18} className={`text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                      </button>
+
+                      {isExpanded && (
+                        <div className="p-3 flex flex-col gap-2 bg-white border-t border-slate-100">
+                          {group.tasks.length === 0 ? (
+                            <p className="text-xs text-slate-400 text-center py-4 font-bold">No quests assigned.</p>
+                          ) : (
+                            group.tasks.map(task => (
+                              <div key={task.id} className="flex flex-col gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100 group/task shrink-0">
+                                {editingTaskId === task.id ? (
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex gap-2">
+                                      <input type="text" value={editTaskIcon} onChange={e => setEditTaskIcon(e.target.value)} className="w-10 text-center bg-white border border-slate-300 rounded-lg outline-none focus:border-indigo-400" maxLength={2} />
+                                      <input type="text" value={editTaskTitle} onChange={e => setEditTaskTitle(e.target.value)} className="flex-1 px-2 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400" />
+                                    </div>
+                                    <div className="flex gap-2 items-center flex-wrap">
+                                      <input type="number" value={editTaskPoints} onChange={e => setEditTaskPoints(e.target.value)} className="w-16 px-2 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400" />
+                                      <span className="text-xs font-bold text-slate-400 mr-2">Stars</span>
+                                      
+                                      <select value={editTaskFrequency} onChange={e => setEditTaskFrequency(e.target.value)} className="px-2 py-1 bg-white border border-slate-300 rounded-lg outline-none font-bold text-sm focus:border-indigo-400 text-slate-600">
+                                        <option value="once">One-Time</option>
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly">Monthly</option>
+                                      </select>
+
+                                      <div className="ml-auto flex gap-2">
+                                        <button onClick={() => handleSaveEditTask(task.id)} className="bg-indigo-500 text-white p-2 rounded-lg hover:bg-indigo-600"><Check size={16} /></button>
+                                        <button onClick={() => setEditingTaskId(null)} className="bg-slate-300 text-slate-700 p-2 rounded-lg hover:bg-slate-400"><X size={16} /></button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm">{task.icon}</div>
+                                      <div>
+                                        <p className="font-bold text-slate-700 text-sm truncate max-w-[150px]">{task.title}</p>
+                                        <p className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                          <Star size={10} className="fill-yellow-400 text-yellow-400" /> {task.points} • {task.frequency || 'once'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
+                                      <button onClick={() => { 
+                                        setEditingTaskId(task.id); 
+                                        setEditTaskTitle(task.title); 
+                                        setEditTaskIcon(task.icon); 
+                                        setEditTaskPoints(task.points); 
+                                        setEditTaskFrequency(task.frequency || 'once'); 
+                                      }} className="text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 p-1.5 rounded-lg"><Edit2 size={16} /></button>
+                                      <button onClick={() => handleDeleteTask(task.id)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={16} /></button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          )}
                         </div>
                       )}
                     </div>
