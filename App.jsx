@@ -1090,7 +1090,8 @@ const ParentsView = () => {
             </div>
           </form>
         </div>
-
+      </div>
+      
       {/* RIGHT COLUMN (Notifications & Management) */}
       <div className="w-full xl:w-96 flex flex-col gap-6">
          
