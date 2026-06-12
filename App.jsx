@@ -337,6 +337,7 @@ const HomeView = ({ setCurrentView, setActiveKidId }) => {
 };
 
 // --- DASHBOARD VIEW ---
+// --- DASHBOARD VIEW ---
 const DashboardView = ({ triggerCelebration }) => {
   const { profiles, tasks, activeKidId, user } = useContext(FamilyContext);
   const activeProfile = profiles.find(p => p.id === activeKidId);
@@ -344,7 +345,28 @@ const DashboardView = ({ triggerCelebration }) => {
   const upForGrabsTasks = tasks.filter(t => t.assigneeId === 'unassigned' && (t.status ? t.status !== 'completed' : !t.completed));
   const { rewards } = useContext(FamilyContext);
 
-const handleCompleteTask = async (task) => {
+  // State to hold which task is waiting for a second click
+  const [confirmingTaskId, setConfirmingTaskId] = useState(null);
+
+  const handleTaskInteraction = (task, isPending) => {
+    if (isPending) return; // Prevent clicking on pending tasks
+    
+    if (confirmingTaskId === task.id) {
+      // If they clicked it twice, mark it complete!
+      handleCompleteTask(task);
+      setConfirmingTaskId(null);
+    } else {
+      // First click: Ask for confirmation
+      setConfirmingTaskId(task.id);
+      
+      // Automatically reset the button after 3 seconds if they don't confirm
+      setTimeout(() => {
+        setConfirmingTaskId(current => current === task.id ? null : current);
+      }, 3000);
+    }
+  };
+
+  const handleCompleteTask = async (task) => {
     if (!user || !activeProfile || task.status === 'pending') return;
     
     const baseRef = collection(db, 'artifacts', appId, 'users', 'our-family-bucket', 'family_data');
@@ -352,7 +374,6 @@ const handleCompleteTask = async (task) => {
     
     if (task.requiresApproval) {
       try { 
-        // Lock the task to the kid requesting approval
         await updateDoc(taskRef, { status: 'pending', assigneeId: activeKidId }); 
       } 
       catch (error) { console.error("Error submitting task for approval:", error); }
@@ -364,11 +385,12 @@ const handleCompleteTask = async (task) => {
     const todayStr = getLocalDateString();
     const batch = writeBatch(db);
 
+    const totalPoints = task.points + (task.bonusPoints || 0);
+
     try {
-      // Lock the task to the kid completing it
-      batch.update(taskRef, { completed: true, status: 'completed', assigneeId: activeKidId });
-      batch.update(profileRef, { points: activeProfile.points + task.points });
-      batch.set(historyRef, { kidId: activeKidId, taskId: task.id, taskTitle: task.title, points: task.points, date: todayStr, timestamp: serverTimestamp() });
+      batch.update(taskRef, { completed: true, status: 'completed', assigneeId: activeKidId, lastCompleted: todayStr });
+      batch.update(profileRef, { points: activeProfile.points + totalPoints });
+      batch.set(historyRef, { kidId: activeKidId, taskId: task.id, taskTitle: task.title, points: totalPoints, date: todayStr, timestamp: serverTimestamp() });
 
       const remainingTasks = activeTasks.filter(t => t.id !== task.id);
       if (remainingTasks.length === 0 && activeTasks.length > 0) {
@@ -421,17 +443,28 @@ const handleCompleteTask = async (task) => {
               {activeTasks.map(task => {
                 const isPending = task.status === 'pending';
                 const isRejected = task.status === 'rejected';
+                const totalPoints = task.points + (task.bonusPoints || 0);
+                const isConfirming = confirmingTaskId === task.id;
 
                 return (
-                  <motion.div key={task.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8 }} whileHover={isPending ? {} : { scale: 1.02, y: -4 }} whileTap={isPending ? {} : { scale: 0.98 }} onClick={() => handleCompleteTask(task)}
+                  <motion.div key={task.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8 }} whileHover={isPending ? {} : { scale: 1.02, y: -4 }} whileTap={isPending ? {} : { scale: 0.98 }} onClick={() => handleTaskInteraction(task, isPending)}
                     className={`rounded-3xl p-6 shadow-sm border cursor-pointer flex flex-col justify-between aspect-square group transition-all relative overflow-hidden ${
-                      isPending ? 'bg-slate-50 border-slate-200 opacity-80 cursor-not-allowed' : isRejected ? 'bg-red-50 border-red-200' : 'bg-white border-slate-100 hover:border-indigo-100'
+                      isPending ? 'bg-slate-50 border-slate-200 opacity-80 cursor-not-allowed' : 
+                      isRejected ? 'bg-red-50 border-red-200' : 
+                      isConfirming ? 'bg-emerald-50 border-emerald-400 ring-4 ring-emerald-100' : 
+                      'bg-white border-slate-100 hover:border-indigo-100'
                     }`}
                   >
                     {isPending && ( <div className="absolute top-0 left-0 w-full bg-slate-200 text-slate-600 text-[10px] font-black uppercase py-1 text-center flex items-center justify-center gap-1 z-10"><Clock size={12} /> Waiting on Parent</div> )}
                     {isRejected && ( <div className="absolute top-0 left-0 w-full bg-red-500 text-white text-[10px] font-black uppercase py-1 text-center flex items-center justify-center gap-1 z-10"><AlertCircle size={12} /> Try Again</div> )}
+                    
+                    {task.bonusPoints > 0 && !isPending && (
+                      <div className="absolute -top-2 -right-2 bg-gradient-to-br from-orange-400 to-red-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-bl-xl shadow-md z-20 animate-pulse">
+                        +{task.bonusPoints} Bonus!
+                      </div>
+                    )}
 
-                    <div className={`flex justify-between items-start ${isPending || isRejected ? 'mt-4' : ''}`}>
+                    <div className={`flex justify-between items-start ${isPending || isRejected || task.bonusPoints > 0 ? 'mt-4' : ''}`}>
                       <div className={`text-5xl w-20 h-20 rounded-2xl flex items-center justify-center transition-transform duration-300 relative ${isPending ? 'bg-slate-100 grayscale' : isRejected ? 'bg-red-100' : 'bg-slate-50 group-hover:rotate-12'}`}>
                         {task.icon}
                         {task.frequency && task.frequency !== 'once' && (
@@ -440,17 +473,24 @@ const handleCompleteTask = async (task) => {
                           </span>
                         )}
                       </div>
-                      <div className={`font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm ${isPending ? 'bg-slate-200 text-slate-500' : isRejected ? 'bg-red-200 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                        <Star size={16} className={isPending ? 'text-slate-400 fill-slate-400' : isRejected ? 'text-red-500 fill-red-500' : 'fill-yellow-500 text-yellow-500'} /> +{task.points}
+                      <div className={`font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm ${isPending ? 'bg-slate-200 text-slate-500' : isRejected ? 'bg-red-200 text-red-700' : task.bonusPoints > 0 ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-yellow-100 text-yellow-700'}`}>
+                        <Star size={16} className={isPending ? 'text-slate-400 fill-slate-400' : isRejected ? 'text-red-500 fill-red-500' : task.bonusPoints > 0 ? 'fill-orange-500 text-orange-500' : 'fill-yellow-500 text-yellow-500'} /> +{totalPoints}
                       </div>
                     </div>
                     <div className="mt-4">
                       <h3 className={`text-xl font-extrabold leading-tight transition-colors ${isPending ? 'text-slate-500' : isRejected ? 'text-red-800' : 'text-slate-800 group-hover:text-indigo-600'}`}>{task.title}</h3>
                       <div className={`flex items-center gap-2 mt-3 font-bold ${isPending ? 'text-slate-400' : isRejected ? 'text-red-500' : 'text-slate-400'}`}>
-                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isPending ? 'border-slate-300 bg-slate-100' : isRejected ? 'border-red-300 bg-red-100' : 'border-slate-200 group-hover:bg-emerald-500 group-hover:border-emerald-500 group-hover:text-white'}`}>
+                        <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                          isPending ? 'border-slate-300 bg-slate-100' : 
+                          isRejected ? 'border-red-300 bg-red-100' : 
+                          isConfirming ? 'bg-emerald-500 border-emerald-500 text-white shadow-md' : 
+                          'border-slate-200 group-hover:bg-emerald-500 group-hover:border-emerald-500 group-hover:text-white'
+                        }`}>
                           {isPending ? <Clock size={16} strokeWidth={3} /> : isRejected ? <AlertCircle size={16} strokeWidth={3} /> : <Check size={16} strokeWidth={3} />}
                         </div>
-                        <span className={!isPending && !isRejected ? 'group-hover:text-emerald-500 transition-colors' : ''}>{isPending ? 'Pending' : isRejected ? 'Needs Fix' : 'Tap to finish'}</span>
+                        <span className={!isPending && !isRejected ? (isConfirming ? 'text-emerald-600 font-black' : 'group-hover:text-emerald-500 transition-colors') : ''}>
+                          {isPending ? 'Pending' : isRejected ? 'Needs Fix' : isConfirming ? 'Confirm?' : 'Tap to finish'}
+                        </span>
                       </div>
                     </div>
                   </motion.div>
@@ -459,6 +499,7 @@ const handleCompleteTask = async (task) => {
             </AnimatePresence>
           </motion.div>
         )}
+        
         {upForGrabsTasks.length > 0 && (
           <div className="mt-10">
             <h2 className="text-2xl font-extrabold text-slate-800 mb-6 flex items-center gap-2">
@@ -466,34 +507,50 @@ const handleCompleteTask = async (task) => {
             </h2>
             <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               <AnimatePresence>
-                {upForGrabsTasks.map(task => (
-                  <motion.div key={task.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} whileHover={{ scale: 1.02, y: -4 }} whileTap={{ scale: 0.98 }} onClick={() => handleCompleteTask(task)}
-                    className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-3xl p-6 shadow-sm border border-yellow-200 cursor-pointer flex flex-col justify-between aspect-square group transition-all"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="text-5xl w-20 h-20 bg-white rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:rotate-12 shadow-sm relative">
-                        {task.icon}
-                      </div>
-                      <div className="font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm bg-yellow-400 text-yellow-900">
-                        <Star size={16} className="fill-yellow-100 text-yellow-100" /> +{task.points}
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <h3 className="text-xl font-extrabold leading-tight text-yellow-900 group-hover:text-orange-600 transition-colors">{task.title}</h3>
-                      <div className="flex items-center gap-2 mt-3 font-bold text-yellow-700">
-                        <div className="w-8 h-8 rounded-full border-2 border-yellow-300 bg-white flex items-center justify-center transition-all group-hover:bg-orange-500 group-hover:border-orange-500 group-hover:text-white">
-                          <Check size={16} strokeWidth={3} />
+                {upForGrabsTasks.map(task => {
+                  const totalPoints = task.points + (task.bonusPoints || 0);
+                  const isConfirming = confirmingTaskId === task.id;
+                  
+                  return (
+                    <motion.div key={task.id} layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} whileHover={{ scale: 1.02, y: -4 }} whileTap={{ scale: 0.98 }} onClick={() => handleTaskInteraction(task, false)}
+                      className={`bg-gradient-to-br from-yellow-50 to-orange-50 rounded-3xl p-6 shadow-sm cursor-pointer flex flex-col justify-between aspect-square group transition-all relative overflow-hidden ${
+                        isConfirming ? 'border-2 border-orange-400 ring-4 ring-orange-100' : 'border border-yellow-200'
+                      }`}
+                    >
+                      {task.bonusPoints > 0 && (
+                        <div className="absolute -top-2 -right-2 bg-gradient-to-br from-orange-400 to-red-500 text-white text-[10px] font-black uppercase px-3 py-1.5 rounded-bl-xl shadow-md z-20 animate-pulse">
+                          +{task.bonusPoints} Bonus!
                         </div>
-                        <span className="group-hover:text-orange-600 transition-colors">Tap to Claim</span>
+                      )}
+                      
+                      <div className={`flex justify-between items-start ${task.bonusPoints > 0 ? 'mt-4' : ''}`}>
+                        <div className="text-5xl w-20 h-20 bg-white rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:rotate-12 shadow-sm relative">
+                          {task.icon}
+                        </div>
+                        <div className={`font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-sm ${task.bonusPoints > 0 ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-yellow-400 text-yellow-900'}`}>
+                          <Star size={16} className={task.bonusPoints > 0 ? "fill-orange-500 text-orange-500" : "fill-yellow-100 text-yellow-100"} /> +{totalPoints}
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                      <div className="mt-4">
+                        <h3 className="text-xl font-extrabold leading-tight text-yellow-900 group-hover:text-orange-600 transition-colors">{task.title}</h3>
+                        <div className="flex items-center gap-2 mt-3 font-bold text-yellow-700">
+                          <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                            isConfirming ? 'bg-orange-500 border-orange-500 text-white shadow-md' : 'border-yellow-300 bg-white group-hover:bg-orange-500 group-hover:border-orange-500 group-hover:text-white'
+                          }`}>
+                            <Check size={16} strokeWidth={3} />
+                          </div>
+                          <span className={isConfirming ? 'text-orange-600 font-black' : 'group-hover:text-orange-600 transition-colors'}>
+                            {isConfirming ? 'Confirm Claim?' : 'Tap to Claim'}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )
+                })}
               </AnimatePresence>
             </motion.div>
           </div>
         )}
-        
       </section>
     </div>
   );
